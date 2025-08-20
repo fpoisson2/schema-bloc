@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Construis ton système — Schéma-bloc</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <div id="app">
+      <header class="topbar">
+        <div class="brand">🔧 Construis ton système</div>
+        <div class="top-actions">
+          <button id="btn-help" class="secondary">Consignes</button>
+          <button id="btn-home" class="secondary">Accueil</button>
+          <span id="room-indicator"></span>
+        </div>
+      </header>
+
+      <main id="view-home" class="view">
+        <section class="card">
+          <h2>Nouvelle session</h2>
+          <label>Nom de l’équipe
+            <input type="text" id="team-name" placeholder="Ex: Les Électronauts" />
+          </label>
+          <div class="actions">
+            <button id="btn-solo">Solo</button>
+            <button id="btn-create">Créer une salle</button>
+          </div>
+        </section>
+        <section class="card">
+          <h2>Rejoindre une salle</h2>
+          <label>Code de salle
+            <input type="text" id="join-code" placeholder="ABC123" />
+          </label>
+          <div class="actions">
+            <button id="btn-join">Rejoindre</button>
+          </div>
+        </section>
+      </main>
+
+      <main id="view-board" class="view hidden">
+        <section class="sidebar">
+          <div class="panel">
+            <h3>Équipe</h3>
+            <div id="team-display">–</div>
+          </div>
+          <div class="panel">
+            <h3>Titre du schéma</h3>
+            <input id="board-title" type="text" placeholder="Donne un titre à ton système" aria-label="Titre du schéma" />
+          </div>
+          <div class="panel">
+            <h3>Pioche de cartes</h3>
+            <button id="btn-draw" aria-label="Piger des cartes">Piger (équilibré)</button>
+            <div id="drawn-cards" class="cards"></div>
+            <div class="alea">
+              <strong>Aléa:</strong>
+              <span id="alea-display">–</span>
+            </div>
+          </div>
+          <div class="panel">
+            <h3>Outils</h3>
+            <div class="tools">
+              <button id="tool-select" class="tool active" data-tool="select" aria-label="Outil sélection">Sélection</button>
+              <button id="tool-energy" class="tool" data-tool="energy" aria-label="Ajouter flèche énergie">Flèche Énergie</button>
+              <button id="tool-signal" class="tool" data-tool="signal" aria-label="Ajouter flèche signal">Flèche Signal</button>
+              <button id="tool-add-block" class="tool" data-tool="block" aria-label="Ajouter bloc">Ajouter bloc</button>
+            </div>
+            <div class="grid">
+              <label><input type="checkbox" id="toggle-grid" checked /> Grille magnétique</label>
+            </div>
+          </div>
+          <div class="panel">
+            <h3>Adaptation à l’aléa</h3>
+            <textarea id="alea-notes" rows="4" placeholder="Comment notre système s’adapte ?"></textarea>
+          </div>
+          <div class="panel">
+            <h3>Exporter / Sauvegarder</h3>
+            <button id="btn-export-png" aria-label="Exporter en PNG">Exporter PNG</button>
+            <button id="btn-export-pdf" aria-label="Exporter en PDF">Exporter PDF</button>
+            <button id="btn-save" class="secondary" aria-label="Sauvegarder">Sauvegarder</button>
+            <button id="btn-load" class="secondary" aria-label="Recharger">Recharger</button>
+          </div>
+        </section>
+
+        <section class="board-wrap">
+          <div id="board" class="board"></div>
+        </section>
+      </main>
+    </div>
+
+    <div id="help-modal" class="modal hidden" role="dialog" aria-modal="true" aria-label="Consignes de l'activité">
+      <div class="content">
+        <div class="close-row"><button id="btn-help-close">Fermer</button></div>
+        <h2>Activité — Construis ton système</h2>
+        <ol>
+          <li>Pige 4 cartes « éléments » et 1 carte « aléa ».</li>
+          <li>Dépose les éléments sur le tableau et organise-les.</li>
+          <li>Relie les blocs avec des flèches :
+            Énergie (rouge, épais) et Signal (bleu, fin).</li>
+          <li>Double‑clic sur un bloc ou un lien pour ajouter un texte (ex.: 12 V, Wi‑Fi).</li>
+          <li>Indique comment votre système s’adapte à l’aléa.</li>
+          <li>Exportez votre schéma en PNG ou en PDF.</li>
+        </ol>
+        <p>Astuce: active/désactive la grille magnétique selon tes besoins.</p>
+      </div>
+    </div>
+
+    <script src="/app.js"></script>
+  </body>
+  </html>

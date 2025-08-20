@@ -1,0 +1,29 @@
+{
+  "categories": {
+    "Sources": [
+      "Soleil (panneau)", "Pile AA", "Batterie 12 V", "Prise murale",
+      "Dynamo (vélo)", "Vent (éolienne)"
+    ],
+    "Traitement": [
+      "Interrupteur", "Bouton poussoir", "Régulateur (stabilise)",
+      "Convertisseur DC/DC", "Multiprise", "Onduleur (DC→AC)",
+      "Disjoncteur/Fusible", "Ordinateur"
+    ],
+    "Communication": [
+      "Routeur Wi-Fi", "Point d’accès", "Antenne tour", "Câble Ethernet",
+      "Téléphone", "Satellite"
+    ],
+    "CapteursActionneurs": [
+      "Capteur température", "Capteur pluie", "Microphone", "Caméra",
+      "Haut-parleur", "Lumière (DEL)", "Moteur", "Ventilateur"
+    ],
+    "Usages": [
+      "Maison intelligente", "Serre", "Station météo",
+      "Vélo électrique", "Chargeur de téléphone", "Répéteur d’urgence"
+    ]
+  },
+  "aleas": [
+    "Ombre", "Panne de batterie", "Câble trop long (perte)",
+    "Polarité inversée", "Surcharge", "Température élevée"
+  ]
+}
