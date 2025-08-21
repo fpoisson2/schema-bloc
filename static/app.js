@@ -25,6 +25,7 @@
   const roomIndicator = $('#room-indicator');
   const teamDisplay = $('#team-display');
   const teamInput = $('#team-name');
+  function teamInputValue(){ try{ return (teamInput && teamInput.value && teamInput.value.trim()) || ''; }catch{ return ''; } }
   const joinCode = $('#join-code');
   const aleaDisplay = $('#alea-display');
   const drawnCardsEl = $('#drawn-cards');
@@ -309,6 +310,7 @@ function renderDrawn(){
   let suppressClearClick = false; // avoid clearing selection right after rubber-band
   let quickLink = null; // {type:'energy'|'signal', fromId}
   let titleEditor = null; // HTML input for inline editing
+  let longPress = null; // {timer, x, y, opened, id}
 
   function viewScale(){ const rect = svg.getBoundingClientRect(); const vb = svg.viewBox.baseVal; return { sx: rect.width/vb.width, sy: rect.height/vb.height, rect }; }
   function openTitleEditor(B){
@@ -508,6 +510,9 @@ function renderDrawn(){
         if(e.detail && e.detail > 1){ return; }
         if(g.setPointerCapture){ try{ g.setPointerCapture(e.pointerId); }catch(_){} }
         const pt = toSvgPoint(e);
+        // arm long-press to edit on touch
+        try{ if(longPress && longPress.timer) clearTimeout(longPress.timer); }catch{}
+        longPress = { x: pt.x, y: pt.y, opened: false, id: B.id, timer: setTimeout(()=>{ openTitleEditor(B); if(longPress) longPress.opened = true; }, 600) };
         moveStartSnapshot = snapshotBoard();
         // Quick link creation if armed
         if(quickLink && quickLink.fromId && quickLink.type){
@@ -540,6 +545,9 @@ function renderDrawn(){
         if(e.detail && e.detail > 1){ return; }
         if(g.setPointerCapture){ try{ g.setPointerCapture(e.pointerId); }catch(_){} }
         const pt = toSvgPoint(e);
+        // arm long-press to edit on touch
+        try{ if(longPress && longPress.timer) clearTimeout(longPress.timer); }catch{}
+        longPress = { x: pt.x, y: pt.y, opened: false, id: B.id, timer: setTimeout(()=>{ openTitleEditor(B); if(longPress) longPress.opened = true; }, 600) };
         moveStartSnapshot = snapshotBoard();
         const isSel = selected.has(`block:${B.id}`);
         const multiIds = Array.from(selected).filter(s=>s.startsWith('block:')).map(s=>s.split(':')[1]);
@@ -576,7 +584,7 @@ function renderDrawn(){
       handles.forEach(h => {
         const c = document.createElementNS(svgNS,'circle');
         c.setAttribute('cx', h.x); c.setAttribute('cy', h.y);
-        c.setAttribute('r', 6);
+        c.setAttribute('r', 9);
         c.setAttribute('class','handle');
         c.addEventListener('pointerdown', (e)=>{
           e.stopPropagation();
@@ -614,6 +622,8 @@ function renderDrawn(){
 
   svg.addEventListener('pointermove', (e)=>{
     const pt = toSvgPoint(e);
+    // cancel long-press if moved significantly
+    if(longPress){ const dx = pt.x - longPress.x, dy = pt.y - longPress.y; if((dx*dx + dy*dy) > 36){ try{ clearTimeout(longPress.timer); }catch{} longPress = null; } }
     if(dragging && dragging.type==='block'){
       const B = state.board.blocks.find(b=>b.id===dragging.id);
       if(!B) return;
@@ -637,6 +647,7 @@ function renderDrawn(){
   });
   svg.addEventListener('pointerup', (e)=>{
     const pt = toSvgPoint(e);
+    if(longPress){ try{ clearTimeout(longPress.timer); }catch{} longPress = null; }
     if(dragging){
       if(moveStartSnapshot){ pushHistoryFrom(moveStartSnapshot); moveStartSnapshot=null; }
       dragging = null; syncIfRoom();
@@ -813,14 +824,14 @@ function renderDrawn(){
     btnHomeTitle.addEventListener('click', ()=>{ showHome(); });
     btnHomeTitle.addEventListener('keydown', (e)=>{ if(e.key==='Enter' || e.key===' ') { e.preventDefault(); showHome(); } });
   }
-  $('#btn-solo').addEventListener('click', async ()=>{ await ensureDeck(); state.roomId = 'SOLO'; state.team = teamInput.value.trim()||'Solo'; state.mode='puzzle'; state.ranked=false; enterBoard(); });
+  $('#btn-solo').addEventListener('click', async ()=>{ await ensureDeck(); state.roomId = 'SOLO'; state.team = ''; state.mode='puzzle'; state.ranked=false; enterBoard(); });
   const btnRanked = document.getElementById('btn-ranked');
   const btnSandbox = document.getElementById('btn-sandbox');
-  if(btnRanked){ btnRanked.addEventListener('click', async ()=>{ await ensureDeck(); state.roomId = 'SOLO'; state.team = teamInput.value.trim()||'Classé'; state.mode='puzzle'; state.ranked=true; enterBoard(); }); }
-  if(btnSandbox){ btnSandbox.addEventListener('click', async ()=>{ await ensureDeck(); state.roomId = 'SANDBOX'; state.team = teamInput.value.trim()||'Sandbox'; state.mode='puzzle'; state.ranked=false; enterBoard(); }); }
+  if(btnRanked){ btnRanked.addEventListener('click', async ()=>{ await ensureDeck(); state.roomId = 'SOLO'; state.team = ''; state.mode='puzzle'; state.ranked=true; enterBoard(); }); }
+  if(btnSandbox){ btnSandbox.addEventListener('click', async ()=>{ await ensureDeck(); state.roomId = 'SANDBOX'; state.team = ''; state.mode='puzzle'; state.ranked=false; enterBoard(); }); }
   $('#btn-create').addEventListener('click', async ()=>{
     await ensureDeck();
-    const team = teamInput.value.trim();
+    const team = teamInputValue();
     const res = await api('/create', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({team})});
     state.roomId = res.roomId; state.team = team||`Équipe ${res.roomId}`; enterBoard();
   });
@@ -829,7 +840,7 @@ function renderDrawn(){
     const code = joinCode.value.trim(); if(!code) return alert('Entrez un code.');
     try{
       const res = await api('/join', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({roomId: code})});
-      state.roomId = res.roomId; state.team = teamInput.value.trim()||`Équipe ${res.roomId}`; enterBoard();
+      state.roomId = res.roomId; state.team = teamInputValue()||`Équipe ${res.roomId}`; enterBoard();
     }catch(err){ alert('Salle introuvable'); }
   });
 
@@ -926,12 +937,14 @@ function renderDrawn(){
     viewHome.classList.remove('hidden');
     viewBoard.classList.add('hidden');
     roomIndicator.textContent = '';
+    try{ document.body.classList.add('home'); }catch{}
   }
   function enterBoard(){
     if(teamDisplay) teamDisplay.textContent = state.team||'–';
     roomIndicator.textContent = state.roomId ? `Salle: ${state.roomId}` : '';
     viewHome.classList.add('hidden');
     viewBoard.classList.remove('hidden');
+    try{ document.body.classList.remove('home'); }catch{}
     renderBoard();
     // Charger les casse‑têtes
     ensurePuzzles();
@@ -1319,7 +1332,7 @@ function renderDrawn(){
     div.style.left = px+'px'; div.style.top = py+'px';
     const bE = document.createElement('button'); bE.className='energy'; bE.textContent='Énergie';
     const bS = document.createElement('button'); bS.className='signal'; bS.textContent='Communication';
-    const bC = document.createElement('button'); bC.className='signal'; bC.textContent='Contrôle';
+    const bC = document.createElement('button'); bC.className='control'; bC.textContent='Contrôle';
     bE.addEventListener('click', ()=>{ pushHistory(); L.type='energy'; renderBoard(); syncIfRoom(); });
     bS.addEventListener('click', ()=>{ pushHistory(); L.type='signal'; renderBoard(); syncIfRoom(); });
     bC.addEventListener('click', ()=>{ pushHistory(); L.type='control'; renderBoard(); syncIfRoom(); });

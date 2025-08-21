@@ -20,15 +20,12 @@
       </header>
 
       <main id="view-home" class="view">
-        <section class="card">
-          <h2>Nouvelle session</h2>
-          <label>Nom de l’équipe
-            <input type="text" id="team-name" placeholder="Ex: Les Électronauts" />
-          </label>
-          <div class="actions">
-            <button id="btn-solo">Solo (Casse‑tête)</button>
-            <button id="btn-sandbox" class="secondary">Sandbox</button>
+        <section class="card home-modes">
+          <div class="actions stack">
+            <button id="btn-solo" class="big">Mode solo (casse‑tête)</button>
+            <button id="btn-sandbox" class="big secondary">Bac à sable</button>
           </div>
+          <div class="hint">Choisis un mode pour commencer. Rejoins ou crée une salle pour collaborer.</div>
         </section>
         <section class="card">
           <h2>Rejoindre une salle</h2>
@@ -118,16 +115,16 @@
         <div class="close-row"><button id="btn-help-close">Fermer</button></div>
         <h2>Activité — Construis ton système</h2>
         <ol>
-          <li>Pige 4 cartes « éléments » et 1 « problématique ».</li>
+          <li>Choisis un mode: Solo (casse‑tête) ou Bac à sable.</li>
+          <li>En mode casse‑tête, sélectionne un casse‑tête ou utilise la pioche pour obtenir des cartes et une problématique. Tu peux générer plusieurs séquences puis choisir une proposition.</li>
           <li>Dépose les éléments sur le tableau et organise-les.</li>
-          <li>Relie les blocs avec des flèches :
-            Énergie (rouge, épais) et Signal (bleu, fin).</li>
-          <li>Double‑clic sur un bloc ou un lien pour ajouter un texte (ex.: 12 V, Wi‑Fi).</li>
-          <li>Indique comment votre système répond à la problématique.</li>
-          <li>Exportez votre schéma en PNG ou en PDF.</li>
+          <li>Crée des liens avec les poignées des blocs : Énergie (rouge, épais), Communication (bleu, pointillé) et Contrôle (vert, pointillé).</li>
+          <li>Double‑tape (mobile) ou double‑clic (ordinateur) sur un bloc ou un lien pour ajouter un texte (ex.: 12 V, Wi‑Fi). Un appui long sur mobile ouvre aussi l’édition.</li>
+          <li>Explique en quelques phrases comment le système répond à la problématique.</li>
+          <li>Exporte en PNG ou PDF, ou sauvegarde/charge ta progression.</li>
         </ol>
         <p>Astuce: active/désactive la grille magnétique selon tes besoins.</p>
-        <p>Raccourcis: E pour flèche Énergie, S pour flèche Signal.</p>
+        <p>Raccourcis clavier (ordinateur): E = Énergie, S = Signal, C = Contrôle, Ctrl/Cmd+Z = Annuler, Ctrl/Cmd+Y = Rétablir.</p>
       </div>
     </div>
 
