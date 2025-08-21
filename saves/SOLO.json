@@ -1,3 +1,3 @@
 {
-  "lastDrawSig": "cap:haut-parleur+src:batterie-12-v+trt:interrupteur+use:maison-intelligente+alea:ombre"
+  "lastDrawSig": "cap:haut-parleur+cap:lumiere-del+cap:microphone+com:antenne-tour+com:cable-ethernet+com:routeur-wi-fi+com:satellite+src:dynamo-velo+trt:regulateur-stabilise+use:station-meteo+alea:ombre"
 }

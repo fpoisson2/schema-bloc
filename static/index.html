@@ -10,6 +10,9 @@
     <div id="app">
       <header class="topbar">
         <div class="brand">🔧 Construis ton système</div>
+        <div class="titlebar">
+          <input id="board-title" type="text" placeholder="Titre du schéma" aria-label="Titre du schéma" />
+        </div>
         <div class="top-actions">
           <button id="btn-help" class="secondary">Consignes</button>
           <button id="btn-home" class="secondary">Accueil</button>
@@ -24,8 +27,8 @@
             <input type="text" id="team-name" placeholder="Ex: Les Électronauts" />
           </label>
           <div class="actions">
-            <button id="btn-solo">Solo</button>
-            <button id="btn-create">Créer une salle</button>
+            <button id="btn-solo">Solo (Casse‑tête)</button>
+            <button id="btn-sandbox" class="secondary">Sandbox</button>
           </div>
         </section>
         <section class="card">
@@ -35,44 +38,58 @@
           </label>
           <div class="actions">
             <button id="btn-join">Rejoindre</button>
+            <button id="btn-create">Créer une salle</button>
           </div>
         </section>
       </main>
 
       <main id="view-board" class="view hidden">
         <section class="sidebar">
-          <div class="panel">
-            <h3>Équipe</h3>
-            <div id="team-display">–</div>
+          <div class="panel" id="puzzle-panel">
+            <h3>Casse‑tête</h3>
+            <label>Choisir
+              <select id="puzzle-select">
+                <option value="">— Aucun —</option>
+              </select>
+            </label>
+            <div id="puzzle-details" class="puzzle-details hidden"></div>
+            <div class="hint">Sélectionne un casse‑tête puis clique sur les cartes suggérées pour les ajouter, ou utilise les actions ci‑dessus.</div>
           </div>
-          <div class="panel">
-            <h3>Titre du schéma</h3>
-            <input id="board-title" type="text" placeholder="Donne un titre à ton système" aria-label="Titre du schéma" />
-          </div>
-          <div class="panel">
+          <div class="panel" id="draw-panel">
             <h3>Pioche de cartes</h3>
-            <button id="btn-draw" aria-label="Piger des cartes">Piger (équilibré)</button>
+            <div class="draw-controls">
+              <label>Cartes
+                <input type="number" id="draw-count" min="3" max="12" value="4" style="width:64px" />
+              </label>
+              <label>Séquences
+                <select id="draw-sequences">
+                  <option value="1">1</option>
+                  <option value="2">2</option>
+                  <option value="3">3</option>
+                  <option value="5">5</option>
+                  <option value="10">10</option>
+                  <option value="20">20</option>
+                  <option value="50">50</option>
+                  <option value="100">100</option>
+                </select>
+              </label>
+            </div>
+            <button id="btn-draw" aria-label="Piger des cartes">Piger</button>
             <div id="drawn-cards" class="cards"></div>
+            <div id="draw-proposals" class="cards"></div>
             <div class="alea">
-              <strong>Aléa:</strong>
+              <strong>Problématique:</strong>
               <span id="alea-display">–</span>
             </div>
           </div>
-          <div class="panel">
-            <h3>Outils</h3>
-            <div class="tools">
-              <button id="tool-select" class="tool active" data-tool="select" aria-label="Outil sélection">Sélection</button>
-              <button id="tool-energy" class="tool" data-tool="energy" aria-label="Ajouter flèche énergie">Flèche Énergie</button>
-              <button id="tool-signal" class="tool" data-tool="signal" aria-label="Ajouter flèche signal">Flèche Signal</button>
-              <button id="tool-add-block" class="tool" data-tool="block" aria-label="Ajouter bloc">Ajouter bloc</button>
-            </div>
-            <div class="grid">
-              <label><input type="checkbox" id="toggle-grid" checked /> Grille magnétique</label>
-            </div>
-          </div>
-          <div class="panel">
-            <h3>Adaptation à l’aléa</h3>
-            <textarea id="alea-notes" rows="4" placeholder="Comment notre système s’adapte ?"></textarea>
+          <!-- Section Équipe retirée en mode casse‑tête -->
+          <!-- Titre déplacé dans la barre du haut -->
+          <!-- Section Outils retirée en mode casse‑tête (flèches via poignées) -->
+          <div class="panel" id="score-panel">
+            <h3>Score & Progression</h3>
+            <div class="score-row"><span>Score:</span> <strong id="score-value">0</strong></div>
+            <div class="progress"><div id="progress-bar"></div></div>
+            <div id="score-hint" class="hint">Gagne des points avec des blocs reliés, les deux types de flèches et une réponse détaillée.</div>
           </div>
           <div class="panel">
             <h3>Exporter / Sauvegarder</h3>
@@ -94,15 +111,16 @@
         <div class="close-row"><button id="btn-help-close">Fermer</button></div>
         <h2>Activité — Construis ton système</h2>
         <ol>
-          <li>Pige 4 cartes « éléments » et 1 carte « aléa ».</li>
+          <li>Pige 4 cartes « éléments » et 1 « problématique ».</li>
           <li>Dépose les éléments sur le tableau et organise-les.</li>
           <li>Relie les blocs avec des flèches :
             Énergie (rouge, épais) et Signal (bleu, fin).</li>
           <li>Double‑clic sur un bloc ou un lien pour ajouter un texte (ex.: 12 V, Wi‑Fi).</li>
-          <li>Indique comment votre système s’adapte à l’aléa.</li>
+          <li>Indique comment votre système répond à la problématique.</li>
           <li>Exportez votre schéma en PNG ou en PDF.</li>
         </ol>
         <p>Astuce: active/désactive la grille magnétique selon tes besoins.</p>
+        <p>Raccourcis: E pour flèche Énergie, S pour flèche Signal.</p>
       </div>
     </div>
 

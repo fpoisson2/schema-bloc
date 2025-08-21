@@ -8,10 +8,14 @@
 
   const state = {
     deck: null,
+    puzzles: [],
+    puzzle: null, // selected puzzle object
     roomId: null,
     team: "",
+    mode: 'puzzle', // 'puzzle' | 'draw'
+    ranked: false,
     grid: true,
-    drawn: { cards: [], alea: null },
+    drawn: { cards: [], alea: null, proposals: [], chosenIndex: null },
     board: { blocks: [], links: [] },
   };
 
@@ -24,8 +28,30 @@
   const joinCode = $('#join-code');
   const aleaDisplay = $('#alea-display');
   const drawnCardsEl = $('#drawn-cards');
+  const drawProposalsEl = $('#draw-proposals');
   const aleaNotes = $('#alea-notes');
   const toggleGrid = $('#toggle-grid');
+  const drawCount = $('#draw-count');
+  const drawSequences = $('#draw-sequences');
+  const boardTitle = $('#board-title');
+  // Puzzles UI
+  const puzzleSelect = $('#puzzle-select');
+  const puzzleDetails = $('#puzzle-details');
+  const puzzlePanel = document.getElementById('puzzle-panel');
+  const btnPuzzleApply = $('#btn-puzzle-apply');
+  const btnPuzzlePrefill = $('#btn-puzzle-prefill');
+  // Mode UI and score UI
+  const modePanel = document.getElementById('mode-panel');
+  const drawPanel = document.getElementById('draw-panel');
+  const modeBtns = $$('.mode-btn');
+  const modePuzzleBtn = document.getElementById('mode-puzzle');
+  const modeDrawBtn = document.getElementById('mode-draw');
+  const modeHint = document.getElementById('mode-hint');
+  const linkOptions = document.getElementById('link-options');
+  const linkSetEnergy = document.getElementById('link-set-energy');
+  const linkSetSignal = document.getElementById('link-set-signal');
+  const scoreValue = document.getElementById('score-value');
+  const progressBar = document.getElementById('progress-bar');
 
   // Tools
   let currentTool = 'select';
@@ -59,8 +85,10 @@
 
   const linksLayer = document.createElementNS(svgNS, 'g');
   const blocksLayer = document.createElementNS(svgNS, 'g');
+  const uiLayer = document.createElementNS(svgNS, 'g');
   svg.appendChild(linksLayer);
   svg.appendChild(blocksLayer);
+  svg.appendChild(uiLayer);
 
   // Helpers
   const id = () => Math.random().toString(36).slice(2,10);
@@ -96,19 +124,79 @@
     catch { state.deck = await api('/deck'); }
   }
 
+  async function loadPuzzles(){
+    try{
+      const list = await api('/puzzles.json');
+      if(Array.isArray(list)){
+        state.puzzles = list;
+        // populate select
+        if(puzzleSelect){
+          // keep current selection if exists
+          const cur = puzzleSelect.value;
+          puzzleSelect.innerHTML = '<option value="">— Aucun —</option>' +
+            list.map(p=>`<option value="${p.id}">${escapeHtml(p.title)}</option>`).join('');
+          if(cur) puzzleSelect.value = cur;
+        }
+      }
+    }catch(e){ /* silently ignore if not available */ }
+  }
+
+  function escapeHtml(s){ return String(s||'').replace(/[&<>"']/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c])); }
+
+  function renderPuzzleDetails(){
+    if(!puzzleDetails) return;
+    const p = state.puzzle;
+    if(!p){ puzzleDetails.classList.add('hidden'); puzzleDetails.innerHTML=''; return; }
+    const tags = (p.tags||[]).join(' • ');
+    const byLabel = state.deck ? buildLabelToCategory(state.deck) : new Map();
+    const sugg = (p.suggested_blocks||[])
+      .map(lbl=>({ label: lbl, category: byLabel.get(lbl) }))
+      .filter(c=>!!c.category);
+    const cardsHtml = sugg.map(c=>`<div class="card-item" data-label="${escapeHtml(c.label)}" data-category="${escapeHtml(c.category)}"><span>${escapeHtml(c.label)}</span> <span class="cat">(${escapeHtml(c.category)})</span></div>`).join('');
+    puzzleDetails.innerHTML = `
+      <div class="title">${escapeHtml(p.title)}</div>
+      <div class="meta">Objectif: ${escapeHtml(p.target||'–')}</div>
+      <div class="meta">Cartes suggérées: ${p.min_cards||'-'}–${p.max_cards||'-'}${tags? ' • ' + escapeHtml(tags):''}</div>
+      <div class="problem">${escapeHtml(p.problem||'')}</div>
+      <div class="cards">${cardsHtml}</div>
+    `;
+    // Allow clicking or glisser-déposer des cartes suggérées
+    $$('.card-item', puzzleDetails).forEach(el=>{
+      el.setAttribute('draggable','true');
+      el.addEventListener('click', ()=>{
+        const card = { label: el.dataset.label, category: el.dataset.category };
+        addBlockFromCard(card);
+      });
+      el.addEventListener('dragstart', (e)=>{
+        const payload = JSON.stringify({ label: el.dataset.label, category: el.dataset.category });
+        e.dataTransfer.setData('application/json', payload);
+        e.dataTransfer.effectAllowed = 'copy';
+      });
+    });
+    puzzleDetails.classList.remove('hidden');
+  }
+
   // Draw cards
 async function drawCards(){
   try{
-    const res = await api('/api/draw', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ roomId: state.roomId||'SOLO' })});
+    const count = parseInt((drawCount && drawCount.value) || '4', 10);
+    const seq = parseInt((drawSequences && drawSequences.value) || '1', 10);
+    if(state.roomId && state.roomId !== 'SOLO'){
+      await api(`/api/room/${state.roomId}/draw`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ count, sequences: seq })});
+      return; // SSE will update UI
+    }
+    const res = await api('/api/draw', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ roomId: state.roomId||'SOLO', count, sequences: seq })});
+    if(res.proposals){ state.drawn.proposals = res.proposals; renderProposals(); return; }
     state.drawn.cards = res.elements || [];
-    state.drawn.alea = res.alea && res.alea.label;
+    state.drawn.alea = (res.alea && res.alea.label) || null;
   }catch{
     const cats = state.deck.categories;
     const elementsPool = Object.entries(cats).flatMap(([cat, arr]) => (cat==='Sources'||cat==='Traitement'||cat==='Communication'||cat==='CapteursActionneurs'||cat==='Usages')
       ? arr.map(x=>({category:cat, label:x})) : []);
     const aleas = (state.deck.aleas||[]).slice();
     function pickMany(arr, n){ const tmp = arr.slice(); for(let i=tmp.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [tmp[i],tmp[j]]=[tmp[j],tmp[i]]; } return tmp.slice(0,n); }
-    state.drawn.cards = pickMany(elementsPool, 4);
+    const n = parseInt((drawCount && drawCount.value) || '4', 10);
+    state.drawn.cards = pickMany(elementsPool, n);
     state.drawn.alea = pickMany(aleas, 1)[0];
   }
   renderDrawn();
@@ -116,6 +204,7 @@ async function drawCards(){
 
 function renderDrawn(){
     drawnCardsEl.innerHTML = '';
+    if(drawProposalsEl) drawProposalsEl.innerHTML = '';
     state.drawn.cards.forEach(c => {
       const el = document.createElement('div');
       el.className = 'card-item';
@@ -128,69 +217,173 @@ function renderDrawn(){
       drawnCardsEl.appendChild(el);
     });
     aleaDisplay.textContent = state.drawn.alea || '–';
+    if(typeof renderScore === 'function') renderScore();
+  }
+
+  function renderProposals(){
+    if(!drawProposalsEl) return;
+    drawnCardsEl.innerHTML = '';
+    drawProposalsEl.innerHTML = '';
+    const proposals = state.drawn.proposals || [];
+    proposals.forEach((p, idx)=>{
+      const wrap = document.createElement('div');
+      wrap.className = 'proposal';
+      const list = document.createElement('div');
+      list.className = 'cards';
+      (p.elements||[]).forEach(c=>{
+        const el = document.createElement('div');
+        el.className = 'card-item';
+        const label = c.label || c.name; const cat = c.category || c.cat;
+        el.innerHTML = `<span>${label}</span> <span class="cat">(${cat})</span>`;
+        list.appendChild(el);
+      });
+      const controls = document.createElement('div');
+      controls.className = 'actions';
+      const btn = document.createElement('button');
+      btn.textContent = 'Choisir cette séquence';
+      btn.addEventListener('click', async ()=>{
+        if(state.roomId && state.roomId !== 'SOLO'){
+          await api(`/api/room/${state.roomId}/choose_draw`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ index: idx })});
+        } else {
+          state.drawn.cards = p.elements||[];
+          state.drawn.alea = (p.alea && p.alea.label) || null;
+          state.drawn.proposals = [];
+          renderDrawn();
+        }
+      });
+      controls.appendChild(btn);
+      const alea = document.createElement('div');
+      alea.className = 'alea';
+      alea.innerHTML = `<strong>Problématique:</strong> <span>${(p.alea && p.alea.label) || '–'}</span>`;
+      wrap.appendChild(list);
+      wrap.appendChild(alea);
+      wrap.appendChild(controls);
+      drawProposalsEl.appendChild(wrap);
+    });
   }
 
   function addBlockFromCard(card){
+    pushHistory();
     const b = {
       id: id(), x: snap(120 + state.board.blocks.length*40), y: snap(120), w: 220, h: 90,
       title: (card.label || card.name), category: (card.category || card.cat)
     };
     state.board.blocks.push(b);
     renderBoard();
+    syncIfRoom();
   }
 
   function addAdHocBlock(){
     const name = prompt('Nom du bloc ?');
     if(!name) return;
+    pushHistory();
     const b = { id:id(), x:snap(240), y:snap(220), w:220, h:90, title:name, category:'Personnalisé' };
     state.board.blocks.push(b);
     renderBoard();
   }
 
   // Board interactions
-  let dragging = null; // {type:'block', id, dx, dy}
+  // History for undo/redo
+  const history = [];
+  const redoStack = [];
+  let moveStartSnapshot = null; // snapshot before a drag move
+  function snapshotBoard(){ return JSON.parse(JSON.stringify(state.board)); }
+  function pushHistoryFrom(snap){
+    try{
+      history.push(JSON.parse(JSON.stringify(snap)));
+      if(history.length>100) history.shift();
+      redoStack.length = 0;
+    }catch{}
+  }
+  function pushHistory(){ pushHistoryFrom(snapshotBoard()); }
+  function applySnapshot(snap){ state.board = JSON.parse(JSON.stringify(snap)); selected.clear(); selectedId=null; renderBoard(); syncIfRoom(); }
+  let dragging = null; // {type:'block'|'multi', id, dx, dy, ids?, offsets?}
   let linkDraft = null; // {type:'energy'|'signal', fromId, x1,y1,x2,y2}
-  let selectedId = null; // block or link id prefix with type
+  let selectedId = null; // primary selection id
+  const selected = new Set(); // multi-selection set of ids 'block:..' or 'link:..'
+  let rubber = null; // {x1,y1,x2,y2}
+  let linkBubble = null; // floating HTML bubble for link type
+  let suppressClearClick = false; // avoid clearing selection right after rubber-band
+  let quickLink = null; // {type:'energy'|'signal', fromId}
 
   function renderBoard(){
     // clear layers
     linksLayer.innerHTML = '';
     blocksLayer.innerHTML = '';
+    uiLayer.innerHTML = '';
 
     // Links first
+    function computeAnchors(from, to){
+      const fx = from.x, fy = from.y, fw = from.w, fh = from.h;
+      const tx = to.x, ty = to.y, tw = to.w, th = to.h;
+      const fc = { x: fx + fw/2, y: fy + fh/2 };
+      const tc = { x: tx + tw/2, y: ty + th/2 };
+      const dx = tc.x - fc.x, dy = tc.y - fc.y;
+      // choose side by dominant axis
+      let x1=fc.x, y1=fc.y, x2=tc.x, y2=tc.y;
+      if(Math.abs(dx) > Math.abs(dy)){
+        // horizontal attachment
+        x1 = dx >= 0 ? fx + fw : fx; y1 = fc.y;
+        x2 = dx >= 0 ? tx : tx + tw; y2 = tc.y;
+      } else {
+        // vertical attachment
+        x1 = fc.x; y1 = dy >= 0 ? fy + fh : fy;
+        x2 = tc.x; y2 = dy >= 0 ? ty : ty + th;
+      }
+      return { x1, y1, x2, y2 };
+    }
+
     state.board.links.forEach(L => {
       const from = state.board.blocks.find(b=>b.id===L.from);
       const to = state.board.blocks.find(b=>b.id===L.to);
       if(!from || !to) return;
-      const x1 = from.x + from.w/2; const y1 = from.y + from.h/2;
-      const x2 = to.x + to.w/2; const y2 = to.y + to.h/2;
-      const path = document.createElementNS(svgNS,'line');
-      path.setAttribute('x1', x1); path.setAttribute('y1', y1);
-      path.setAttribute('x2', x2); path.setAttribute('y2', y2);
-      path.classList.add('link');
+      const { x1, y1, x2, y2 } = computeAnchors(from, to);
+      // Visual line (no hit)
+      const vis = document.createElementNS(svgNS,'line');
+      vis.setAttribute('x1', x1); vis.setAttribute('y1', y1);
+      vis.setAttribute('x2', x2); vis.setAttribute('y2', y2);
+      vis.classList.add('link');
+      vis.style.pointerEvents = 'none';
       if(L.type==='energy'){
-        path.classList.add('energy');
-        path.setAttribute('stroke', '#d32f2f');
-        path.setAttribute('stroke-width', '4.5');
-        path.setAttribute('marker-end', 'url(#arrow-red)');
+        vis.classList.add('energy');
+        vis.setAttribute('stroke', '#d32f2f');
+        vis.setAttribute('stroke-width', '4.5');
+        vis.setAttribute('marker-end', 'url(#arrow-red)');
       }else{
-        path.setAttribute('stroke', '#1976d2');
-        path.setAttribute('stroke-width', '2.5');
-        path.setAttribute('marker-end', 'url(#arrow-blue)');
+        vis.setAttribute('stroke', '#1976d2');
+        vis.setAttribute('stroke-width', '2.5');
+        vis.setAttribute('marker-end', 'url(#arrow-blue)');
       }
-      path.dataset.id = L.id;
-      path.addEventListener('dblclick', ()=>{
+      if(selected.has(`link:${L.id}`)) vis.classList.add('selected');
+      linksLayer.appendChild(vis);
+
+      // Thin hit line for precise selection
+      const hit = document.createElementNS(svgNS,'line');
+      hit.setAttribute('x1', x1); hit.setAttribute('y1', y1);
+      hit.setAttribute('x2', x2); hit.setAttribute('y2', y2);
+      hit.setAttribute('stroke', '#000');
+      hit.setAttribute('stroke-opacity', '0');
+      hit.setAttribute('stroke-width', L.type==='energy' ? '1.6' : '1.0');
+      hit.setAttribute('pointer-events', 'stroke');
+      hit.style.cursor = 'pointer';
+      hit.dataset.id = L.id;
+      hit.addEventListener('dblclick', ()=>{
+        pushHistory();
         const t = prompt('Texte du lien ?', L.label||'');
         if(t!=null){ L.label = t; renderBoard(); }
       });
-      path.addEventListener('click', (e)=>{ e.stopPropagation(); select(`link:${L.id}`); });
-      linksLayer.appendChild(path);
+      hit.addEventListener('click', (e)=>{ e.stopPropagation(); select(`link:${L.id}`, e.shiftKey||e.metaKey||e.ctrlKey); });
+      linksLayer.appendChild(hit);
 
       if(L.label){
         const midx = (x1+x2)/2, midy=(y1+y2)/2;
         const g = document.createElementNS(svgNS,'g');
         const rect = document.createElementNS(svgNS,'rect');
         const txt = document.createElementNS(svgNS,'text');
+        // Ensure label overlay doesn't block link interactions
+        g.style.pointerEvents = 'none';
+        rect.style.pointerEvents = 'none';
+        txt.style.pointerEvents = 'none';
         txt.setAttribute('x', midx); txt.setAttribute('y', midy);
         txt.setAttribute('text-anchor','middle'); txt.setAttribute('dominant-baseline','middle');
         txt.setAttribute('class','label-text');
@@ -234,8 +427,10 @@ function renderDrawn(){
     state.board.blocks.forEach(B => {
       const g = document.createElementNS(svgNS,'g');
       g.classList.add('block');
-      if(selectedId===`block:${B.id}`) g.classList.add('selected');
+      if(selected.has(`block:${B.id}`)) g.classList.add('selected');
       g.dataset.id = B.id;
+      g.addEventListener('pointerenter', ()=>{ g.classList.add('hover'); });
+      g.addEventListener('pointerleave', ()=>{ g.classList.remove('hover'); });
 
       const rect = document.createElementNS(svgNS,'rect');
       rect.setAttribute('x', B.x); rect.setAttribute('y', B.y);
@@ -269,35 +464,97 @@ function renderDrawn(){
       g.addEventListener('pointerdown', (e)=>{
         if(g.setPointerCapture){ try{ g.setPointerCapture(e.pointerId); }catch(_){} }
         const pt = toSvgPoint(e);
-        if(currentTool==='select'){
+        moveStartSnapshot = snapshotBoard();
+        // Quick link creation if armed
+        if(quickLink && quickLink.fromId && quickLink.type){
+          if(quickLink.fromId !== B.id){
+            state.board.links.push({ id:id(), type:quickLink.type, from:quickLink.fromId, to:B.id });
+            quickLink = null;
+            renderBoard();
+            syncIfRoom();
+            setTool('select');
+            return;
+          }
+        }
+        // group-drag support if multiple selected
+        const isSel = selected.has(`block:${B.id}`);
+        const multiIds = Array.from(selected).filter(s=>s.startsWith('block:')).map(s=>s.split(':')[1]);
+        if(isSel && multiIds.length>1){
+          const offsets = new Map();
+          multiIds.forEach(idb=>{
+            const bb = state.board.blocks.find(b=>b.id===idb);
+            if(bb) offsets.set(idb, { dx: pt.x - bb.x, dy: pt.y - bb.y });
+          });
+          dragging = { type:'multi', ids: multiIds, offsets };
+        } else {
           dragging = { type:'block', id:B.id, dx: pt.x - B.x, dy: pt.y - B.y };
-          select(`block:${B.id}`);
-        } else if(currentTool==='energy' || currentTool==='signal'){
-          const cx = B.x + B.w/2, cy=B.y + B.h/2;
-          linkDraft = { type:currentTool, fromId: B.id, x1: cx, y1: cy, x2: cx, y2: cy };
+          select(`block:${B.id}`, e.shiftKey||e.metaKey||e.ctrlKey);
         }
       });
       // also attach on rect for reliable hit
       rect.addEventListener('pointerdown', (e)=>{
         if(g.setPointerCapture){ try{ g.setPointerCapture(e.pointerId); }catch(_){} }
         const pt = toSvgPoint(e);
-        if(currentTool==='select'){
+        moveStartSnapshot = snapshotBoard();
+        const isSel = selected.has(`block:${B.id}`);
+        const multiIds = Array.from(selected).filter(s=>s.startsWith('block:')).map(s=>s.split(':')[1]);
+        if(isSel && multiIds.length>1){
+          const offsets = new Map();
+          multiIds.forEach(idb=>{
+            const bb = state.board.blocks.find(b=>b.id===idb);
+            if(bb) offsets.set(idb, { dx: pt.x - bb.x, dy: pt.y - bb.y });
+          });
+          dragging = { type:'multi', ids: multiIds, offsets };
+        } else {
           dragging = { type:'block', id:B.id, dx: pt.x - B.x, dy: pt.y - B.y };
-          select(`block:${B.id}`);
-        } else if(currentTool==='energy' || currentTool==='signal'){
-          const cx = B.x + B.w/2, cy=B.y + B.h/2;
-          linkDraft = { type:currentTool, fromId: B.id, x1: cx, y1: cy, x2: cx, y2: cy };
+          select(`block:${B.id}`, e.shiftKey||e.metaKey||e.ctrlKey);
         }
       });
+      // Click to select without dragging
+      g.addEventListener('click', (e)=>{ e.stopPropagation(); select(`block:${B.id}`, e.shiftKey||e.metaKey||e.ctrlKey); });
       g.addEventListener('dblclick', ()=>{
+        pushHistory();
         const t = prompt('Titre du bloc ?', B.title);
         if(t!=null){ B.title = t; renderBoard(); }
       });
+      // Handles au centre des arrêtes
+      const handles = [
+        { x: B.x + B.w/2, y: B.y },
+        { x: B.x + B.w, y: B.y + B.h/2 },
+        { x: B.x + B.w/2, y: B.y + B.h },
+        { x: B.x, y: B.y + B.h/2 },
+      ];
+      handles.forEach(h => {
+        const c = document.createElementNS(svgNS,'circle');
+        c.setAttribute('cx', h.x); c.setAttribute('cy', h.y);
+        c.setAttribute('r', 6);
+        c.setAttribute('class','handle');
+        c.addEventListener('pointerdown', (e)=>{
+          e.stopPropagation();
+          if(g.setPointerCapture){ try{ g.setPointerCapture(e.pointerId); }catch(_){} }
+          const tool = (currentTool==='energy' || currentTool==='signal') ? currentTool : 'signal';
+          linkDraft = { type: tool, fromId: B.id, x1: h.x, y1: h.y, x2: h.x, y2: h.y };
+        });
+        g.appendChild(c);
+      });
+
       blocksLayer.appendChild(g);
     });
+    if(typeof renderScore === 'function') renderScore();
+    updateLinkOptionsVisibility();
+    renderLinkBubble();
   }
 
-  function select(idStr){ selectedId = idStr; renderBoard(); }
+  function select(idStr, additive=false){
+    if(!idStr){ selected.clear(); selectedId = null; renderBoard(); return; }
+    if(additive){
+      if(selected.has(idStr)) selected.delete(idStr); else selected.add(idStr);
+    } else {
+      selected.clear(); selected.add(idStr);
+    }
+    selectedId = selected.size===1 ? Array.from(selected)[0] : null;
+    renderBoard();
+  }
 
   function toSvgPoint(evt){
     const pt = svg.createSVGPoint();
@@ -314,27 +571,199 @@ function renderDrawn(){
       B.x = snap(pt.x - dragging.dx);
       B.y = snap(pt.y - dragging.dy);
       renderBoard();
+    } else if(dragging && dragging.type==='multi'){
+      dragging.ids.forEach(idb=>{
+        const bb = state.board.blocks.find(b=>b.id===idb);
+        const off = dragging.offsets.get(idb);
+        if(bb && off){ bb.x = snap(pt.x - off.dx); bb.y = snap(pt.y - off.dy); }
+      });
+      renderBoard();
     } else if(linkDraft){
       linkDraft.x2 = pt.x; linkDraft.y2 = pt.y; renderBoard();
+    } else if(rubber){
+      rubber.x2 = pt.x; rubber.y2 = pt.y;
+      applyRubberSelection(true);
+      drawRubber();
     }
   });
   svg.addEventListener('pointerup', (e)=>{
     const pt = toSvgPoint(e);
-    if(dragging){ dragging = null; }
+    if(dragging){
+      if(moveStartSnapshot){ pushHistoryFrom(moveStartSnapshot); moveStartSnapshot=null; }
+      dragging = null; syncIfRoom();
+    }
     if(linkDraft){
       // check if released over a block
       const target = state.board.blocks.find(b => pt.x>=b.x && pt.x<=b.x+b.w && pt.y>=b.y && pt.y<=b.y+b.h);
       if(target && target.id !== linkDraft.fromId){
+        pushHistory();
         state.board.links.push({ id:id(), type:linkDraft.type, from:linkDraft.fromId, to:target.id });
       }
       linkDraft = null; renderBoard();
+      syncIfRoom();
+      // After creating a link, return to select for smoother flow
+      setTool('select');
+    }
+    if(rubber){
+      const w = Math.abs(rubber.x2 - rubber.x1);
+      const h = Math.abs(rubber.y2 - rubber.y1);
+      // if rectangle had a minimal size, suppress the subsequent background click clear
+      if(w > 3 || h > 3) suppressClearClick = true;
+      applyRubberSelection();
+      rubber = null; drawRubber();
     }
   });
-  svg.addEventListener('click', ()=> select(null));
+  svg.addEventListener('pointerdown', (e)=>{
+    const t = e.target;
+    // Autoriser le démarrage du rectangle sur les couches vides
+    if(t === svg || t === linksLayer || t === blocksLayer || t === uiLayer){
+      suppressClearClick = false;
+      const pt = toSvgPoint(e);
+      rubber = { x1: pt.x, y1: pt.y, x2: pt.x, y2: pt.y };
+      drawRubber();
+    }
+  });
+  svg.addEventListener('click', ()=>{
+    if(suppressClearClick){ suppressClearClick = false; return; }
+    select(null);
+  });
+
+  // Drag & drop depuis les cartes suggérées vers le tableau
+  boardDiv.addEventListener('dragover', (e)=>{ e.preventDefault(); e.dataTransfer.dropEffect = 'copy'; });
+  boardDiv.addEventListener('drop', (e)=>{
+    e.preventDefault();
+    let data = null;
+    try{ data = JSON.parse(e.dataTransfer.getData('application/json') || 'null'); }catch{}
+    if(!data || !data.label) return;
+    const pt = toSvgPoint(e);
+    const b = { id:id(), x: snap(pt.x - 110), y: snap(pt.y - 45), w:220, h:90, title:data.label, category:data.category||'Personnalisé' };
+    state.board.blocks.push(b);
+    renderBoard();
+    syncIfRoom();
+  });
+
+  function drawRubber(){
+    uiLayer.innerHTML = '';
+    if(!rubber) return;
+    const x = Math.min(rubber.x1, rubber.x2);
+    const y = Math.min(rubber.y1, rubber.y2);
+    const w = Math.abs(rubber.x2 - rubber.x1);
+    const h = Math.abs(rubber.y2 - rubber.y1);
+    const r = document.createElementNS(svgNS,'rect');
+    r.setAttribute('x', x); r.setAttribute('y', y); r.setAttribute('width', w); r.setAttribute('height', h);
+    r.setAttribute('class','rubberband');
+    uiLayer.appendChild(r);
+  }
+
+  function applyRubberSelection(live=false){
+    if(!rubber) return;
+    const x = Math.min(rubber.x1, rubber.x2);
+    const y = Math.min(rubber.y1, rubber.y2);
+    const w = Math.abs(rubber.x2 - rubber.x1);
+    const h = Math.abs(rubber.y2 - rubber.y1);
+    const x2 = x + w, y2 = y + h;
+    selected.clear();
+    state.board.blocks.forEach(b=>{
+      const bx1=b.x, by1=b.y, bx2=b.x+b.w, by2=b.y+b.h;
+      const inter = !(bx2 < x || bx1 > x2 || by2 < y || by1 > y2);
+      if(inter) selected.add(`block:${b.id}`);
+    });
+    // helper: segment-rectangle intersection
+    function segIntersectsRect(x1,y1,x2,y2, rx1,ry1,rx2,ry2){
+      function inside(px,py){ return px>=rx1 && px<=rx2 && py>=ry1 && py<=ry2; }
+      if(inside(x1,y1) || inside(x2,y2)) return true;
+      function ccw(ax,ay,bx,by,cx,cy){ return (cy-ay)*(bx-ax) > (by-ay)*(cx-ax); }
+      function segInter(ax,ay,bx,by,cx,cy,dx,dy){
+        return ccw(ax,ay,cx,cy,dx,dy) !== ccw(bx,by,cx,cy,dx,dy) && ccw(ax,ay,bx,by,cx,cy) !== ccw(ax,ay,bx,by,dx,dy);
+      }
+      // rectangle edges
+      const ex1=rx1, ey1=ry1, ex2=rx2, ey2=ry1; // top
+      const fx1=rx2, fy1=ry1, fx2=rx2, fy2=ry2; // right
+      const gx1=rx2, gy1=ry2, gx2=rx1, gy2=ry2; // bottom
+      const hx1=rx1, hy1=ry2, hx2=rx1, hy2=ry1; // left
+      return segInter(x1,y1,x2,y2, ex1,ey1,ex2,ey2) ||
+             segInter(x1,y1,x2,y2, fx1,fy1,fx2,fy2) ||
+             segInter(x1,y1,x2,y2, gx1,gy1,gx2,gy2) ||
+             segInter(x1,y1,x2,y2, hx1,hy1,hx2,hy2);
+    }
+    state.board.links.forEach(L=>{
+      const from = state.board.blocks.find(b=>b.id===L.from);
+      const to = state.board.blocks.find(b=>b.id===L.to);
+      if(!from||!to) return;
+      const x1 = from.x + from.w/2, y1 = from.y + from.h/2;
+      const x2l = to.x + to.w/2, y2l = to.y + to.h/2;
+      if(segIntersectsRect(x1,y1,x2l,y2l, x,y,x2,y2)) selected.add(`link:${L.id}`);
+    });
+    selectedId = selected.size===1 ? Array.from(selected)[0] : null;
+    renderBoard();
+  }
+
+  // Keyboard deletion of selected block/link (Del/Backspace)
+  document.addEventListener('keydown', (e)=>{
+    if(e.key !== 'Delete' && e.key !== 'Backspace') return;
+    const tag = (document.activeElement && document.activeElement.tagName) || '';
+    if(['INPUT','TEXTAREA','SELECT'].includes(tag)) return; // don't hijack typing
+    if(selected.size===0) return;
+    pushHistory();
+    const blocksToDelete = new Set(Array.from(selected).filter(s=>s.startsWith('block:')).map(s=>s.split(':')[1]));
+    const linksToDelete = new Set(Array.from(selected).filter(s=>s.startsWith('link:')).map(s=>s.split(':')[1]));
+    state.board.links = state.board.links.filter(L => !blocksToDelete.has(L.from) && !blocksToDelete.has(L.to) && !linksToDelete.has(L.id));
+    state.board.blocks = state.board.blocks.filter(b => !blocksToDelete.has(b.id));
+    showToast(blocksToDelete.size+linksToDelete.size>1 ? 'Éléments supprimés' : 'Élément supprimé');
+    selected.clear(); selectedId = null;
+    renderBoard();
+    syncIfRoom();
+    e.preventDefault();
+  });
+
+  // Shortcuts + Quick link creation with E/S hotkeys
+  document.addEventListener('keydown', (e)=>{
+    const tag = (document.activeElement && document.activeElement.tagName) || '';
+    if(e.ctrlKey || e.metaKey){
+      if(!['INPUT','TEXTAREA'].includes(tag)){
+        const key = e.key.toLowerCase();
+        if(key==='a'){
+          e.preventDefault();
+          selected.clear();
+          state.board.blocks.forEach(b=> selected.add(`block:${b.id}`));
+          state.board.links.forEach(l=> selected.add(`link:${l.id}`));
+          selectedId = null; renderBoard();
+          return;
+        }
+        if(key==='z' && !e.shiftKey){
+          e.preventDefault();
+          const snap = history.pop();
+          if(snap){ redoStack.push(snapshotBoard()); applySnapshot(snap); }
+          return;
+        }
+        if(key==='y' || (key==='z' && e.shiftKey)){
+          e.preventDefault();
+          const snap = redoStack.pop();
+          if(snap){ history.push(snapshotBoard()); applySnapshot(snap); }
+          return;
+        }
+      }
+    }
+    if(['INPUT','TEXTAREA','SELECT'].includes(tag)) return;
+    if(!e.key) return;
+    const k = e.key.toLowerCase();
+    if(k==='e' || k==='s'){
+      const [kind, rawId] = (selectedId||'').split(':');
+      if(kind==='block' && rawId){
+        quickLink = { type: k==='e' ? 'energy' : 'signal', fromId: rawId };
+        setTool(quickLink.type);
+        showToast(`Clique un autre bloc pour une flèche ${k==='e'?'Énergie':'Signal'}.`);
+      }
+    }
+  });
 
   // Buttons
   $('#btn-home').addEventListener('click', ()=>{ showHome(); });
-  $('#btn-solo').addEventListener('click', async ()=>{ await ensureDeck(); state.roomId = 'SOLO'; state.team = teamInput.value.trim()||'Solo'; enterBoard(); });
+  $('#btn-solo').addEventListener('click', async ()=>{ await ensureDeck(); state.roomId = 'SOLO'; state.team = teamInput.value.trim()||'Solo'; state.mode='puzzle'; state.ranked=false; enterBoard(); });
+  const btnRanked = document.getElementById('btn-ranked');
+  const btnSandbox = document.getElementById('btn-sandbox');
+  if(btnRanked){ btnRanked.addEventListener('click', async ()=>{ await ensureDeck(); state.roomId = 'SOLO'; state.team = teamInput.value.trim()||'Classé'; state.mode='puzzle'; state.ranked=true; enterBoard(); }); }
+  if(btnSandbox){ btnSandbox.addEventListener('click', async ()=>{ await ensureDeck(); state.roomId = 'SANDBOX'; state.team = teamInput.value.trim()||'Sandbox'; state.mode='puzzle'; state.ranked=false; enterBoard(); }); }
   $('#btn-create').addEventListener('click', async ()=>{
     await ensureDeck();
     const team = teamInput.value.trim();
@@ -351,12 +780,70 @@ function renderDrawn(){
   });
 
   $('#btn-draw').addEventListener('click', ()=>{ if(!state.deck) return; drawCards(); });
-  $('#tool-add-block').addEventListener('click', addAdHocBlock);
-  toggleGrid.addEventListener('change', ()=>{ state.grid = toggleGrid.checked; });
+  const btnAddBlock = $('#tool-add-block'); if(btnAddBlock){ btnAddBlock.addEventListener('click', addAdHocBlock); }
+  if(toggleGrid){ toggleGrid.addEventListener('change', ()=>{ state.grid = toggleGrid.checked; }); }
+
+  // Puzzles events
+  if(puzzleSelect){
+    puzzleSelect.addEventListener('change', ()=>{
+      const selId = puzzleSelect.value;
+      state.puzzle = state.puzzles.find(p=>p.id===selId) || null;
+      renderPuzzleDetails();
+      if(state.puzzle){
+        if(drawCount && state.puzzle.min_cards){ drawCount.value = String(state.puzzle.min_cards); }
+        // Update current problématique display but do not auto-place blocks
+        state.drawn.alea = state.puzzle.title || state.puzzle.target || state.puzzle.id;
+        aleaDisplay.textContent = state.drawn.alea || '–';
+        // Force puzzle mode and hide draw UI
+        state.mode = 'puzzle';
+        if(modeDrawBtn){ modeDrawBtn.classList.add('hidden'); }
+        updateSidebarVisibility();
+      } else {
+        // When no puzzle selected, re-enable draw button depending on context
+        if(modeDrawBtn){ modeDrawBtn.classList.remove('hidden'); }
+        updateSidebarVisibility();
+      }
+    });
+  }
+  if(btnPuzzleApply){
+    btnPuzzleApply.addEventListener('click', ()=>{
+      if(!state.puzzle) return showToast('Choisis un casse‑tête.');
+      // Adjust draw count to min_cards and set alea to the puzzle title
+      if(drawCount && state.puzzle.min_cards){ drawCount.value = String(state.puzzle.min_cards); }
+      state.drawn.alea = state.puzzle.title || state.puzzle.target || state.puzzle.id;
+      aleaDisplay.textContent = state.drawn.alea;
+      showToast('Pioche adaptée au casse‑tête.');
+    });
+  }
+  if(btnPuzzlePrefill){
+    btnPuzzlePrefill.addEventListener('click', ()=>{
+      if(!state.puzzle) return showToast('Choisis un casse‑tête.');
+      if(!state.deck) return showToast('Le jeu de cartes n\'est pas prêt.');
+      const byLabel = buildLabelToCategory(state.deck);
+      const items = (state.puzzle.suggested_blocks||[])
+        .map(lbl=>({ label: lbl, category: byLabel.get(lbl) }))
+        .filter(c=>!!c.category);
+      if(!items.length){ return showToast('Cartes suggérées introuvables dans le deck.'); }
+      state.drawn.cards = items;
+      state.drawn.proposals = [];
+      state.drawn.alea = state.puzzle.title || state.puzzle.target || state.puzzle.id;
+      renderDrawn();
+      showToast('Cartes suggérées prêtes à déposer.');
+    });
+  }
+
+  function buildLabelToCategory(deck){
+    const m = new Map();
+    const cats = deck && deck.categories || {};
+    Object.keys(cats).forEach(cat=>{
+      (cats[cat]||[]).forEach(lbl=>{ m.set(lbl, cat); });
+    });
+    return m;
+  }
 
   $('#btn-save').addEventListener('click', saveToServer);
   $('#btn-load').addEventListener('click', loadFromServer);
-  $('#btn-export-png').addEventListener('click', ()=>{ if(validateBeforeExport()) exportPNG(); });
+  $('#btn-export-png').addEventListener('click', ()=>{ exportPNG(); });
   $('#btn-export-pdf').addEventListener('click', ()=>{ if(validateBeforeExport()) exportPDF(); });
   const helpModal = document.getElementById('help-modal');
   $('#btn-help').addEventListener('click', ()=> toggleHelp(true));
@@ -369,6 +856,7 @@ function renderDrawn(){
   });
 
   async function ensureDeck(){ if(!state.deck) await loadDeck(); }
+  async function ensurePuzzles(){ if(!state.puzzles.length) await loadPuzzles(); }
 
   function showHome(){
     viewHome.classList.remove('hidden');
@@ -376,29 +864,63 @@ function renderDrawn(){
     roomIndicator.textContent = '';
   }
   function enterBoard(){
-    teamDisplay.textContent = state.team||'–';
+    if(teamDisplay) teamDisplay.textContent = state.team||'–';
     roomIndicator.textContent = state.roomId ? `Salle: ${state.roomId}` : '';
     viewHome.classList.add('hidden');
     viewBoard.classList.remove('hidden');
     renderBoard();
+    // Load puzzles after entering to populate selector
+    ensurePuzzles();
+    // Mode gating: Solo/Classé -> puzzle only; sandbox/multi -> libre
+    if(modePanel){
+      if(state.roomId==='SOLO' || state.ranked){
+        state.mode = 'puzzle';
+        if(modeDrawBtn){ modeDrawBtn.classList.add('hidden'); }
+        if(modeHint){ modeHint.classList.remove('hidden'); }
+      } else {
+        if(modeDrawBtn){ modeDrawBtn.classList.remove('hidden'); }
+        if(modeHint){ modeHint.classList.add('hidden'); }
+      }
+      if(typeof setMode === 'function') setMode(state.mode);
+    }
+    if(state.roomId && state.roomId!=='SOLO' && state.roomId!=='SANDBOX'){
+      loadFromServer().finally(()=>{ connectRoomStream(); });
+    }
   }
 
+  // Mode switching helpers
+  function setMode(m){
+    state.mode = m;
+    if(modeBtns){ modeBtns.forEach(b=> b.classList.toggle('active', b.dataset.mode===m)); }
+    updateSidebarVisibility();
+  }
+  function updateSidebarVisibility(){
+    if(drawPanel){
+      const allowDraw = ((state.roomId && state.roomId!=='SOLO') || state.roomId==='SANDBOX') && !state.puzzle;
+      drawPanel.classList.toggle('hidden', !(state.mode==='draw' && allowDraw));
+    }
+  }
+  if(modePuzzleBtn){ modePuzzleBtn.addEventListener('click', ()=> setMode('puzzle')); }
+  if(modeDrawBtn){ modeDrawBtn.addEventListener('click', ()=> setMode('draw')); }
+
   // Validation douce avant export
+  function getNotes(){ return (aleaNotes && aleaNotes.value) || ''; }
+  function setNotes(v){ if(aleaNotes) aleaNotes.value = v; }
   function validateBeforeExport(){
     const titleEl = document.querySelector('#board-title');
     const title = titleEl ? titleEl.value.trim() : '';
     const energy = state.board.links.some(l=>l.type==='energy');
     const signal = state.board.links.some(l=>l.type!=='energy');
     const chainOk = state.board.blocks.length >= 3 && state.board.links.length >= 2;
-    const words = (aleaNotes.value||'').trim().split(/\s+/).filter(Boolean);
-    const aleaOk = !!state.drawn.alea && words.length >= 6;
+    const words = getNotes().trim().split(/\s+/).filter(Boolean);
+    const aleaOk = aleaNotes ? (!!state.drawn.alea && words.length >= 6) : !!state.drawn.alea;
 
     const missing = [];
     if(!title) missing.push('Titre manquant');
     if(!energy) missing.push('Ajouter une flèche Énergie');
     if(!signal) missing.push('Ajouter une flèche Signal');
     if(!chainOk) missing.push('Au moins 3 blocs reliés');
-    if(!aleaOk) missing.push('Aléa + adaptation (≥ 6 mots)');
+    if(aleaNotes && !aleaOk) missing.push('Aléa + adaptation (≥ 6 mots)');
 
     if(missing.length){ showToast('Complète avant export: ' + missing.join(' • ')); return false; }
     return true;
@@ -426,7 +948,7 @@ function renderDrawn(){
     }catch(e){ alert('Erreur de sauvegarde'); }
   }
   function saveToLocal(){
-    const content = { team: state.team, roomId: state.roomId, meta:{ alea: state.drawn.alea, notes: aleaNotes.value }, state: state.board };
+    const content = { team: state.team, roomId: state.roomId, meta:{ alea: state.drawn.alea, notes: getNotes() }, state: state.board };
     localStorage.setItem('schema-bloc-save', JSON.stringify(content));
     alert('Sauvegardé en local.');
   }
@@ -437,8 +959,8 @@ function renderDrawn(){
       state.team = data.team || state.team;
       state.board = data.state || state.board;
       state.drawn.alea = (data.meta && data.meta.alea) || state.drawn.alea;
-      aleaNotes.value = (data.meta && data.meta.notes) || '';
-      teamDisplay.textContent = state.team;
+      setNotes((data.meta && data.meta.notes) || '');
+      if(teamDisplay) teamDisplay.textContent = state.team;
       aleaDisplay.textContent = state.drawn.alea||'–';
       renderBoard();
     }catch(e){ alert('Erreur de chargement'); }
@@ -448,9 +970,9 @@ function renderDrawn(){
     if(!raw) return alert('Aucune sauvegarde locale.');
     try{
       const data = JSON.parse(raw);
-      state.team = data.team; teamDisplay.textContent = state.team;
+      state.team = data.team; if(teamDisplay) teamDisplay.textContent = state.team;
       state.board = data.state||state.board; state.drawn.alea = (data.meta&&data.meta.alea)||state.drawn.alea;
-      aleaNotes.value = (data.meta&&data.meta.notes)||'';
+      setNotes((data.meta&&data.meta.notes)||'');
       aleaDisplay.textContent = state.drawn.alea||'–';
       renderBoard();
     }catch(e){ alert('Sauvegarde corrompue'); }
@@ -458,29 +980,54 @@ function renderDrawn(){
 
   // Export PNG
   async function exportPNG(){
-    const { dataUrl } = await svgToPng();
+    const { dataUrl } = await svgToPngFull();
     downloadData(dataUrl, `schema-bloc_${state.team||'export'}.png`);
   }
-async function svgToPng(){
+  function computeContentBBox(){
+    if(!state.board.blocks.length){ return {x:0,y:0,w:1200,h:800}; }
+    let minX=Infinity, minY=Infinity, maxX=-Infinity, maxY=-Infinity;
+    state.board.blocks.forEach(b=>{
+      minX = Math.min(minX, b.x);
+      minY = Math.min(minY, b.y);
+      maxX = Math.max(maxX, b.x + b.w);
+      maxY = Math.max(maxY, b.y + b.h);
+    });
+    // include link extents (centers)
+    state.board.links.forEach(L=>{
+      const from = state.board.blocks.find(b=>b.id===L.from);
+      const to = state.board.blocks.find(b=>b.id===L.to);
+      if(from && to){
+        const x1 = from.x + from.w/2, y1 = from.y + from.h/2;
+        const x2 = to.x + to.w/2, y2 = to.y + to.h/2;
+        minX = Math.min(minX, x1, x2);
+        minY = Math.min(minY, y1, y2);
+        maxX = Math.max(maxX, x1, x2);
+        maxY = Math.max(maxY, y1, y2);
+      }
+    });
+    const pad = 40;
+    return { x: Math.floor(minX - pad), y: Math.floor(minY - pad), w: Math.ceil((maxX-minX) + 2*pad), h: Math.ceil((maxY-minY) + 2*pad) };
+  }
+  async function svgToPngFull(){
     const clone = svg.cloneNode(true);
     // remove selection glow
     $$('.selected', clone).forEach(g=>g.classList.remove('selected'));
     // inline styles for link types to ensure proper rasterization
     $$('.link.energy', clone).forEach(line=>{ line.setAttribute('stroke', '#d32f2f'); line.setAttribute('stroke-width', '4.5'); line.setAttribute('marker-end', 'url(#arrow-red)'); });
     $$('.link:not(.energy)', clone).forEach(line=>{ line.setAttribute('stroke', '#1976d2'); line.setAttribute('stroke-width', '2.5'); line.setAttribute('marker-end', 'url(#arrow-blue)'); line.setAttribute('stroke-dasharray','6 4'); });
+    const bbox = computeContentBBox();
+    clone.setAttribute('viewBox', `${bbox.x} ${bbox.y} ${bbox.w} ${bbox.h}`);
     const xml = new XMLSerializer().serializeToString(clone);
     const blob = new Blob([xml], {type:'image/svg+xml;charset=utf-8'});
     const url = URL.createObjectURL(blob);
     const img = new Image();
-    const vw = 1200, vh = 800;
     const dataUrl = await new Promise((resolve)=>{
       img.onload = ()=>{
         const canvas = document.createElement('canvas');
-        canvas.width = vw; canvas.height = vh;
+        canvas.width = Math.max(1, bbox.w); canvas.height = Math.max(1, bbox.h);
         const ctx = canvas.getContext('2d');
-        // background (light)
-        ctx.fillStyle = '#ffffff'; ctx.fillRect(0,0,vw,vh);
-        ctx.drawImage(img,0,0);
+        ctx.fillStyle = '#ffffff'; ctx.fillRect(0,0,canvas.width,canvas.height);
+        ctx.drawImage(img,0,0,canvas.width,canvas.height);
         resolve(canvas.toDataURL('image/png'));
         URL.revokeObjectURL(url);
       };
@@ -494,11 +1041,11 @@ async function svgToPng(){
 
   // Export PDF (print-friendly)
   async function exportPDF(){
-    const { dataUrl } = await svgToPng();
+    const { dataUrl } = await svgToPngFull();
     const w = window.open('', '_blank');
     const title = 'Construis ton système — Schéma-bloc';
-    const meta = `Équipe: ${state.team||'-'} | Aléa: ${state.drawn.alea||'-'}`;
-    const notes = (aleaNotes.value||'').replace(/</g,'&lt;');
+    const meta = `Équipe: ${state.team||'-'} | Problématique: ${state.drawn.alea||'-'}`;
+    const notes = (getNotes()||'').replace(/</g,'&lt;');
     w.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>${title}</title>
       <style>
         body{font:14px/1.4 system-ui,Segoe UI,Roboto,Helvetica,Arial;padding:24px;color:#111}
@@ -512,7 +1059,7 @@ async function svgToPng(){
       <h1>${title}</h1>
       <div class="meta">${meta}</div>
       <img src="${dataUrl}" />
-      <h3>Adaptation à l’aléa</h3>
+      <h3>Réponse à la problématique</h3>
       <div class="notes">${notes}</div>
       </body></html>`);
     w.document.close();
@@ -520,9 +1067,9 @@ async function svgToPng(){
 
   // Wire tool buttons to setTool
   function initTools(){
-    $('#tool-select').addEventListener('click', ()=> setTool('select'));
-    $('#tool-energy').addEventListener('click', ()=> setTool('energy'));
-    $('#tool-signal').addEventListener('click', ()=> setTool('signal'));
+    const ts = $('#tool-select'); if(ts){ ts.addEventListener('click', ()=> setTool('select')); }
+    const te = $('#tool-energy'); if(te){ te.addEventListener('click', ()=> setTool('energy')); }
+    const tg = $('#tool-signal'); if(tg){ tg.addEventListener('click', ()=> setTool('signal')); }
   }
 
   // Init
@@ -534,5 +1081,139 @@ async function svgToPng(){
 
   function toggleHelp(show){
     helpModal.classList.toggle('hidden', !show);
+  }
+
+  // --- Room sync via SSE ---
+  let es = null;
+  function connectRoomStream(){
+    try{ if(es){ es.close(); } }catch{}
+    if(!state.roomId || state.roomId==='SOLO') return;
+    es = new EventSource(`/api/room/${state.roomId}/events`);
+    es.addEventListener('state_sync', (e)=>{
+      try{
+        const data = JSON.parse(e.data||'{}');
+        if(data.team) state.team = data.team;
+        if(data.state){ state.board = data.state; }
+        if(data.meta){
+          state.drawn.alea = data.meta.alea || state.drawn.alea;
+          setNotes(data.meta.notes || '');
+          if(boardTitle) boardTitle.value = data.meta.title || '';
+        }
+        if(teamDisplay) teamDisplay.textContent = state.team||'–';
+        aleaDisplay.textContent = state.drawn.alea||'–';
+        renderBoard();
+      }catch{}
+    });
+    es.addEventListener('draws_updated', (e)=>{
+      try{
+        const data = JSON.parse(e.data||'{}');
+        state.drawn.proposals = data.proposals||[];
+        renderProposals();
+      }catch{}
+    });
+    es.addEventListener('draw_chosen', (e)=>{
+      try{
+        const data = JSON.parse(e.data||'{}');
+        const p = data.proposal || {};
+        state.drawn.cards = p.elements || [];
+        state.drawn.alea = (p.alea && p.alea.label) || null;
+        state.drawn.proposals = [];
+        renderDrawn();
+      }catch{}
+    });
+  }
+
+  async function syncIfRoom(){
+    if(!state.roomId || state.roomId==='SOLO') return;
+    try{
+      const meta = { alea: state.drawn.alea, notes: getNotes() };
+      if(boardTitle && boardTitle.value) meta.title = boardTitle.value;
+      await api(`/api/room/${state.roomId}/sync`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ team: state.team, state: state.board, meta }) });
+    }catch{}
+  }
+
+  if(boardTitle){ boardTitle.addEventListener('change', syncIfRoom); }
+  if(aleaNotes){ aleaNotes.addEventListener('change', syncIfRoom); }
+
+  // --- Scoring & progression ---
+  function computeScore(){
+    let score = 0;
+    const blocks = state.board.blocks.length;
+    const links = state.board.links.length;
+    const energy = state.board.links.filter(l=>l.type==='energy').length;
+    const signal = links - energy;
+    score += blocks * 10;
+    score += energy * 8;
+    score += signal * 5;
+    if(energy>0 && signal>0) score += 15;
+    if(blocks>=3 && links>=2) score += 10;
+    const words = getNotes().trim().split(/\s+/).filter(Boolean).length;
+    if(words>=6) score += 12;
+    if(state.puzzle && Array.isArray(state.puzzle.suggested_blocks)){
+      const titles = new Set(state.board.blocks.map(b=>b.title));
+      let used = 0;
+      state.puzzle.suggested_blocks.forEach(lbl=>{ if(titles.has(lbl)) used++; });
+      score += Math.min(used*6, 30);
+    }
+    return Math.max(0, score);
+  }
+  function renderScore(){
+    if(!scoreValue || !progressBar) return;
+    const s = computeScore();
+    scoreValue.textContent = String(s);
+    const lvl = Math.floor(s/60);
+    const pct = Math.min(100, Math.round((s - lvl*60)/60*100));
+    progressBar.style.width = pct + '%';
+    progressBar.title = `Niveau ${lvl} — ${pct}%`;
+  }
+
+  function updateLinkOptionsVisibility(){
+    if(!linkOptions) return;
+    const isLink = selectedId && selectedId.startsWith('link:');
+    linkOptions.classList.toggle('hidden', !isLink);
+  }
+
+  if(linkSetEnergy){
+    linkSetEnergy.addEventListener('click', ()=>{
+      if(!(selectedId && selectedId.startsWith('link:'))) return;
+      const rawId = selectedId.split(':')[1];
+      const L = state.board.links.find(l=>l.id===rawId);
+      if(L){ pushHistory(); L.type = 'energy'; renderBoard(); syncIfRoom(); }
+    });
+  }
+  if(linkSetSignal){
+    linkSetSignal.addEventListener('click', ()=>{
+      if(!(selectedId && selectedId.startsWith('link:'))) return;
+      const rawId = selectedId.split(':')[1];
+      const L = state.board.links.find(l=>l.id===rawId);
+      if(L){ pushHistory(); L.type = 'signal'; renderBoard(); syncIfRoom(); }
+    });
+  }
+
+  // Bulle contextuelle pour changer le type de flèche
+  function renderLinkBubble(){
+    if(linkBubble){ try{ linkBubble.remove(); }catch(_){} linkBubble = null; }
+    if(!(selectedId && selectedId.startsWith('link:'))) return;
+    const rawId = selectedId.split(':')[1];
+    const L = state.board.links.find(l=>l.id===rawId);
+    if(!L) return;
+    const from = state.board.blocks.find(b=>b.id===L.from);
+    const to = state.board.blocks.find(b=>b.id===L.to);
+    if(!from || !to) return;
+    const midx = (from.x+from.w/2 + to.x+to.w/2)/2;
+    const midy = (from.y+from.h/2 + to.y+to.h/2)/2;
+    const rect = svg.getBoundingClientRect();
+    const vb = svg.viewBox.baseVal; const sx = rect.width/vb.width; const sy = rect.height/vb.height;
+    const px = rect.left + midx*sx; const py = rect.top + midy*sy;
+    const div = document.createElement('div');
+    div.className = 'link-bubble';
+    div.style.left = px+'px'; div.style.top = py+'px';
+    const bE = document.createElement('button'); bE.className='energy'; bE.textContent='Énergie';
+    const bS = document.createElement('button'); bS.className='signal'; bS.textContent='Communication';
+    bE.addEventListener('click', ()=>{ pushHistory(); L.type='energy'; renderBoard(); syncIfRoom(); });
+    bS.addEventListener('click', ()=>{ pushHistory(); L.type='signal'; renderBoard(); syncIfRoom(); });
+    div.appendChild(bE); div.appendChild(bS);
+    document.body.appendChild(div);
+    linkBubble = div;
   }
 })();
