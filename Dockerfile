@@ -23,5 +23,6 @@ EXPOSE 5000
 RUN mkdir -p /app/saves
 
 # Default command (override in docker-compose if needed)
-# Disable worker timeout for SSE (infinite streams) and keep 3 workers
-CMD ["gunicorn", "-w", "3", "--timeout", "0", "-b", "0.0.0.0:5000", "wsgi:app"]
+# Use threaded workers so SSE (long-lived) and API POSTs can coexist
+# 1 worker with 16 threads, no timeout for SSE
+CMD ["gunicorn", "-w", "1", "--worker-class", "gthread", "--threads", "16", "--timeout", "0", "-b", "0.0.0.0:5000", "wsgi:app"]
