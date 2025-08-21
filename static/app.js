@@ -67,6 +67,7 @@
   const boardDiv = $('#board');
   const svgNS = 'http://www.w3.org/2000/svg';
   const svg = document.createElementNS(svgNS, 'svg');
+  const isCoarse = (("matchMedia" in window) && matchMedia('(pointer: coarse)').matches) || (navigator.maxTouchPoints>0) || ('ontouchstart' in window);
   svg.classList.add('svg-board');
   svg.setAttribute('width', '100%');
   svg.setAttribute('height', '100%');
@@ -98,6 +99,7 @@
   const id = () => Math.random().toString(36).slice(2,10);
   const clamp = (v,min,max)=>Math.max(min,Math.min(max,v));
   const snap = (v)=> state.grid ? Math.round(v/20)*20 : v;
+  function defaultBlockSize(){ return (isCoarse || window.innerWidth<900) ? { w: 260, h: 110 } : { w: 220, h: 90 }; }
 
   function categoryColor(cat){
     switch(cat){
@@ -268,8 +270,9 @@ function renderDrawn(){
 
   function addBlockFromCard(card){
     pushHistory();
+    const sz = defaultBlockSize();
     const b = {
-      id: id(), x: snap(120 + state.board.blocks.length*40), y: snap(120), w: 220, h: 90,
+      id: id(), x: snap(120 + state.board.blocks.length*40), y: snap(120), w: sz.w, h: sz.h,
       title: (card.label || card.name), category: (card.category || card.cat)
     };
     state.board.blocks.push(b);
@@ -281,7 +284,8 @@ function renderDrawn(){
     const name = prompt('Nom du bloc ?');
     if(!name) return;
     pushHistory();
-    const b = { id:id(), x:snap(240), y:snap(220), w:220, h:90, title:name, category:'Personnalisé' };
+    const sz = defaultBlockSize();
+    const b = { id:id(), x:snap(240), y:snap(220), w:sz.w, h:sz.h, title:name, category:'Personnalisé' };
     state.board.blocks.push(b);
     renderBoard();
   }
@@ -307,6 +311,7 @@ function renderDrawn(){
   const selected = new Set(); // multi-selection set of ids 'block:..' or 'link:..'
   let rubber = null; // {x1,y1,x2,y2}
   let linkBubble = null; // floating HTML bubble for link type
+  let nodeBubble = null; // floating bubble for starting links from a selected block (mobile)
   let suppressClearClick = false; // avoid clearing selection right after rubber-band
   let quickLink = null; // {type:'energy'|'signal', fromId}
   let titleEditor = null; // HTML input for inline editing
@@ -491,7 +496,7 @@ function renderDrawn(){
       t1.setAttribute('x', B.x + 12); t1.setAttribute('y', B.y + 28);
       t1.setAttribute('class','title');
       t1.setAttribute('fill', '#111827');
-      t1.setAttribute('font-size', '16');
+      t1.setAttribute('font-size', (isCoarse || window.innerWidth<900) ? '18' : '16');
       t1.setAttribute('font-weight', '700');
       t1.textContent = B.title;
       g.appendChild(t1);
@@ -501,7 +506,7 @@ function renderDrawn(){
       t2.setAttribute('x', B.x + 12); t2.setAttribute('y', B.y + 52);
       t2.setAttribute('class','category');
       t2.setAttribute('fill', categoryColor(B.category));
-      t2.setAttribute('font-size', '12');
+      t2.setAttribute('font-size', (isCoarse || window.innerWidth<900) ? '13' : '12');
       t2.setAttribute('font-weight', '700');
       t2.textContent = B.category;
       g.appendChild(t2);
@@ -581,10 +586,11 @@ function renderDrawn(){
         { x: B.x + B.w/2, y: B.y + B.h },
         { x: B.x, y: B.y + B.h/2 },
       ];
+      const handleR = (isCoarse || window.innerWidth<900) ? 12 : 9;
       handles.forEach(h => {
         const c = document.createElementNS(svgNS,'circle');
         c.setAttribute('cx', h.x); c.setAttribute('cy', h.y);
-        c.setAttribute('r', 9);
+        c.setAttribute('r', handleR);
         c.setAttribute('class','handle');
         c.addEventListener('pointerdown', (e)=>{
           e.stopPropagation();
@@ -600,6 +606,7 @@ function renderDrawn(){
     if(typeof renderScore === 'function') renderScore();
     updateLinkOptionsVisibility();
     renderLinkBubble();
+    renderNodeBubble();
   }
 
   function select(idStr, additive=false){
@@ -696,7 +703,8 @@ function renderDrawn(){
     try{ data = JSON.parse(e.dataTransfer.getData('application/json') || 'null'); }catch{}
     if(!data || !data.label) return;
     const pt = toSvgPoint(e);
-    const b = { id:id(), x: snap(pt.x - 110), y: snap(pt.y - 45), w:220, h:90, title:data.label, category:data.category||'Personnalisé' };
+    const sz = defaultBlockSize();
+    const b = { id:id(), x: snap(pt.x - Math.round(sz.w/2)), y: snap(pt.y - Math.round(sz.h/2)), w:sz.w, h:sz.h, title:data.label, category:data.category||'Personnalisé' };
     state.board.blocks.push(b);
     renderBoard();
     syncIfRoom();
@@ -807,6 +815,15 @@ function renderDrawn(){
     if(['INPUT','TEXTAREA','SELECT'].includes(tag)) return;
     if(!e.key) return;
     const k = e.key.toLowerCase();
+    // F2 or Enter to edit label/title
+    if(e.key === 'F2' || k==='enter'){
+      const [kind, rawId] = (selectedId||'').split(':');
+      if(kind==='block' && rawId){
+        const B = state.board.blocks.find(b=>b.id===rawId); if(B){ e.preventDefault(); openTitleEditor(B); return; }
+      } else if(kind==='link' && rawId){
+        const L = state.board.links.find(l=>l.id===rawId); if(L){ e.preventDefault(); const t = prompt('Texte du lien ?', L.label||''); if(t!=null){ pushHistory(); L.label = t; renderBoard(); syncIfRoom(); } return; }
+      }
+    }
     if(k==='e' || k==='s' || k==='c'){
       const [kind, rawId] = (selectedId||'').split(':');
       if(kind==='block' && rawId){
@@ -976,6 +993,32 @@ function renderDrawn(){
     const allowDraw = (state.roomId && state.roomId!=='SOLO') && !state.puzzle;
     const show = state.mode==='draw' && allowDraw;
     drawPanel.classList.toggle('hidden', !show);
+  }
+  // Collapsible panels on small screens
+  function initCollapsiblePanels(){
+    const panels = $$('.sidebar .panel');
+    panels.forEach(p=>{
+      if(p.classList.contains('collapsible')) return;
+      const h3 = p.querySelector('h3');
+      if(!h3) return;
+      const content = document.createElement('div');
+      content.className = 'panel-content';
+      while(h3.nextSibling){ content.appendChild(h3.nextSibling); }
+      p.appendChild(content);
+      p.classList.add('collapsible');
+      h3.addEventListener('click', ()=>{
+        p.classList.toggle('collapsed');
+      });
+    });
+    applyPanelCollapse();
+    window.addEventListener('resize', applyPanelCollapse);
+  }
+  function applyPanelCollapse(){
+    const small = window.innerWidth < 900;
+    $$('.sidebar .panel.collapsible').forEach((p,idx)=>{
+      if(small){ p.classList.add('collapsed'); if(idx===0) p.classList.remove('collapsed'); }
+      else { p.classList.remove('collapsed'); }
+    });
   }
   if(modePuzzleBtn){ modePuzzleBtn.addEventListener('click', ()=> setMode('puzzle')); }
   if(modeDrawBtn){ modeDrawBtn.addEventListener('click', ()=> setMode('draw')); }
@@ -1194,6 +1237,7 @@ function renderDrawn(){
     initTools();
     try{ await ensureDeck(); }catch{}
     showHome();
+    initCollapsiblePanels();
   })();
 
   function toggleHelp(show){
@@ -1339,5 +1383,32 @@ function renderDrawn(){
     div.appendChild(bE); div.appendChild(bS); div.appendChild(bC);
     document.body.appendChild(div);
     linkBubble = div;
+  }
+
+  // Bubble near selected block on mobile to start links
+  function renderNodeBubble(){
+    if(nodeBubble){ try{ nodeBubble.remove(); }catch(_){} nodeBubble = null; }
+    if(!(isCoarse || window.innerWidth<900)) return;
+    if(!(selectedId && selectedId.startsWith('block:'))) return;
+    const rawId = selectedId.split(':')[1];
+    const B = state.board.blocks.find(b=>b.id===rawId);
+    if(!B) return;
+    const rect = svg.getBoundingClientRect(); const vb = svg.viewBox.baseVal; const sx = rect.width/vb.width; const sy = rect.height/vb.height;
+    let px = rect.left + (B.x + B.w/2) * sx; let py = rect.top + (B.y) * sy;
+    const div = document.createElement('div');
+    div.className = 'link-bubble';
+    const vpw = window.innerWidth, vph = window.innerHeight; const pad = 10;
+    px = Math.max(pad, Math.min(vpw - pad, px)); py = Math.max(pad + 40, Math.min(vph - pad, py));
+    div.style.left = px+'px'; div.style.top = py+'px';
+    const bE = document.createElement('button'); bE.className='energy'; bE.textContent='Énergie';
+    const bS = document.createElement('button'); bS.className='signal'; bS.textContent='Communication';
+    const bC = document.createElement('button'); bC.className='control'; bC.textContent='Contrôle';
+    function arm(type){ quickLink = { type, fromId: B.id }; setTool(type); showToast('Choisis un autre bloc pour relier.'); try{ div.remove(); }catch{} }
+    bE.addEventListener('click', ()=>arm('energy'));
+    bS.addEventListener('click', ()=>arm('signal'));
+    bC.addEventListener('click', ()=>arm('control'));
+    div.appendChild(bE); div.appendChild(bS); div.appendChild(bC);
+    document.body.appendChild(div);
+    nodeBubble = div;
   }
 })();
