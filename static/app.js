@@ -99,7 +99,7 @@
   const id = () => Math.random().toString(36).slice(2,10);
   const clamp = (v,min,max)=>Math.max(min,Math.min(max,v));
   const snap = (v)=> state.grid ? Math.round(v/20)*20 : v;
-  function defaultBlockSize(){ return (isCoarse || window.innerWidth<900) ? { w: 260, h: 110 } : { w: 220, h: 90 }; }
+  function defaultBlockSize(){ return (isCoarse || window.innerWidth<900) ? { w: 280, h: 120 } : { w: 220, h: 90 }; }
 
   function categoryColor(cat){
     switch(cat){
@@ -507,7 +507,7 @@ function renderDrawn(){
       t1.setAttribute('x', B.x + 12); t1.setAttribute('y', B.y + 28);
       t1.setAttribute('class','title');
       t1.setAttribute('fill', '#111827');
-      t1.setAttribute('font-size', (isCoarse || window.innerWidth<900) ? '18' : '16');
+      t1.setAttribute('font-size', (isCoarse || window.innerWidth<900) ? '22' : '16');
       t1.setAttribute('font-weight', '700');
       t1.textContent = B.title;
       g.appendChild(t1);
@@ -517,7 +517,7 @@ function renderDrawn(){
       t2.setAttribute('x', B.x + 12); t2.setAttribute('y', B.y + 52);
       t2.setAttribute('class','category');
       t2.setAttribute('fill', categoryColor(B.category));
-      t2.setAttribute('font-size', (isCoarse || window.innerWidth<900) ? '13' : '12');
+      t2.setAttribute('font-size', (isCoarse || window.innerWidth<900) ? '15' : '12');
       t2.setAttribute('font-weight', '700');
       t2.textContent = B.category;
       g.appendChild(t2);
@@ -1443,11 +1443,10 @@ function renderDrawn(){
     const B = state.board.blocks.find(b=>b.id===rawId);
     if(!B) return;
     const rect = svg.getBoundingClientRect(); const vb = svg.viewBox.baseVal; const sx = rect.width/vb.width; const sy = rect.height/vb.height;
+    // Fixed offset above the block center (no viewport clamping so it stays consistent)
     let px = rect.left + (B.x + B.w/2) * sx; let py = rect.top + (B.y - 6) * sy;
     const div = document.createElement('div');
     div.className = 'link-bubble';
-    const vpw = window.innerWidth, vph = window.innerHeight; const pad = 8;
-    px = Math.max(pad, Math.min(vpw - pad, px)); py = Math.max(pad + 16, Math.min(vph - pad, py));
     div.style.left = Math.round(px)+'px'; div.style.top = Math.round(py)+'px';
     const bE = document.createElement('button'); bE.className='energy'; bE.textContent='Énergie';
     const bS = document.createElement('button'); bS.className='signal'; bS.textContent='Communication';

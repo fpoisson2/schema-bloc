@@ -166,8 +166,8 @@ body.sidebar-collapsed .sidebar{display:none}
 
 /* Mobile typography scaling */
 @media (max-width: 600px){
-  body{font-size:17px}
-  .card-item{font-size:16px}
-  .link-bubble button{font-size:15px}
-  .inline-editor{font-size:18px}
+  body{font-size:18px}
+  .card-item{font-size:17px}
+  .link-bubble button{font-size:16px}
+  .inline-editor{font-size:20px}
 }
