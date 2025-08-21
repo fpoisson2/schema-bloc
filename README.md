@@ -6,6 +6,11 @@ Lancer en local
 - Démarrer: `FLASK_APP=app.py flask run` (ou `python app.py`)
 - Ouvrir: http://localhost:5000
 
+Déploiement (Gunicorn / Docker)
+- Gunicorn local: `pip install -r requirements.txt && gunicorn -w 3 -b 0.0.0.0:5000 wsgi:app`
+- Docker: `docker compose up --build` puis ouvrir http://localhost:5000
+- Le volume `./saves` est monté dans le conteneur pour persister les salles.
+
 Fonctionnalités
 - Accueil: Solo, créer/rejoindre une salle (code).
 - Pioche: « Piger » propose 1 à 100 séquences réalistes et orientées « problématique », avec nombre de cartes configurable + 1 problématique.

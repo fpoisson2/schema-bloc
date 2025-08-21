@@ -9,13 +9,12 @@
   <body>
     <div id="app">
       <header class="topbar">
-        <div class="brand">🔧 Construis ton système</div>
+        <div class="brand" id="btn-home-title" role="button" tabindex="0" aria-label="Retour à l’accueil">🔧 Construis ton système</div>
         <div class="titlebar">
           <input id="board-title" type="text" placeholder="Titre du schéma" aria-label="Titre du schéma" />
         </div>
         <div class="top-actions">
           <button id="btn-help" class="secondary">Consignes</button>
-          <button id="btn-home" class="secondary">Accueil</button>
           <span id="room-indicator"></span>
         </div>
       </header>
@@ -53,6 +52,9 @@
               </select>
             </label>
             <div id="puzzle-details" class="puzzle-details hidden"></div>
+            <div class="actions">
+              <button id="btn-add-empty-block" class="secondary" aria-label="Ajouter un bloc vide">Ajouter un bloc vide</button>
+            </div>
             <div class="hint">Sélectionne un casse‑tête puis clique sur les cartes suggérées pour les ajouter, ou utilise les actions ci‑dessus.</div>
           </div>
           <div class="panel" id="draw-panel">
@@ -102,6 +104,11 @@
 
         <section class="board-wrap">
           <div id="board" class="board"></div>
+          <div id="legend" class="legend" aria-label="Légende des flèches">
+            <div class="leg-row"><span class="leg-line energy"></span><span class="leg-label">Énergie</span></div>
+            <div class="leg-row"><span class="leg-line signal"></span><span class="leg-label">Communication</span></div>
+            <div class="leg-row"><span class="leg-line control"></span><span class="leg-label">Contrôle</span></div>
+          </div>
         </section>
       </main>
     </div>

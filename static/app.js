@@ -80,6 +80,9 @@
     </marker>
     <marker id="arrow-blue" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse">
       <path d="M 0 0 L 10 5 L 0 10 z" fill="#1976d2" />
+    </marker>
+    <marker id="arrow-green" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#2e7d32" />
     </marker>`;
   svg.appendChild(defs);
 
@@ -181,7 +184,7 @@ async function drawCards(){
   try{
     const count = parseInt((drawCount && drawCount.value) || '4', 10);
     const seq = parseInt((drawSequences && drawSequences.value) || '1', 10);
-    if(state.roomId && state.roomId !== 'SOLO'){
+    if(state.roomId && state.roomId !== 'SOLO' && state.roomId !== 'SANDBOX'){
       await api(`/api/room/${state.roomId}/draw`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ count, sequences: seq })});
       return; // SSE will update UI
     }
@@ -305,6 +308,34 @@ function renderDrawn(){
   let linkBubble = null; // floating HTML bubble for link type
   let suppressClearClick = false; // avoid clearing selection right after rubber-band
   let quickLink = null; // {type:'energy'|'signal', fromId}
+  let titleEditor = null; // HTML input for inline editing
+
+  function viewScale(){ const rect = svg.getBoundingClientRect(); const vb = svg.viewBox.baseVal; return { sx: rect.width/vb.width, sy: rect.height/vb.height, rect }; }
+  function openTitleEditor(B){
+    closeTitleEditor(false);
+    const { sx, sy, rect } = viewScale();
+    const left = rect.left + (B.x + 12) * sx;
+    const top = rect.top + (B.y + 8) * sy;
+    const width = Math.max(60, (B.w - 24) * sx);
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.className = 'inline-editor';
+    input.style.left = left + 'px';
+    input.style.top = top + 'px';
+    input.style.width = width + 'px';
+    input.value = B.title || '';
+    document.body.appendChild(input);
+    input.focus(); input.select();
+    const onSave = ()=>{ const v = input.value.trim(); if(v !== B.title){ pushHistory(); B.title = v; renderBoard(); syncIfRoom(); } closeTitleEditor(false); };
+    const onCancel = ()=>{ closeTitleEditor(false); };
+    input.addEventListener('keydown', (e)=>{
+      if(e.key === 'Enter'){ e.preventDefault(); onSave(); }
+      else if(e.key === 'Escape'){ e.preventDefault(); onCancel(); }
+    });
+    input.addEventListener('blur', onSave);
+    titleEditor = input;
+  }
+  function closeTitleEditor(render=true){ if(titleEditor){ try{ titleEditor.remove(); }catch{} titleEditor=null; if(render) renderBoard(); } }
 
   function renderBoard(){
     // clear layers
@@ -349,7 +380,12 @@ function renderDrawn(){
         vis.setAttribute('stroke', '#d32f2f');
         vis.setAttribute('stroke-width', '4.5');
         vis.setAttribute('marker-end', 'url(#arrow-red)');
-      }else{
+      } else if(L.type==='control'){
+        vis.classList.add('control');
+        vis.setAttribute('stroke', '#2e7d32');
+        vis.setAttribute('stroke-width', '3.5');
+        vis.setAttribute('marker-end', 'url(#arrow-green)');
+      } else {
         vis.setAttribute('stroke', '#1976d2');
         vis.setAttribute('stroke-width', '2.5');
         vis.setAttribute('marker-end', 'url(#arrow-blue)');
@@ -363,7 +399,9 @@ function renderDrawn(){
       hit.setAttribute('x2', x2); hit.setAttribute('y2', y2);
       hit.setAttribute('stroke', '#000');
       hit.setAttribute('stroke-opacity', '0');
-      hit.setAttribute('stroke-width', L.type==='energy' ? '1.6' : '1.0');
+      // élargir encore la ligne d'accroche (invisible)
+      const hitW = L.type==='energy' ? 10 : (L.type==='control' ? 9 : 9);
+      hit.setAttribute('stroke-width', String(hitW));
       hit.setAttribute('pointer-events', 'stroke');
       hit.style.cursor = 'pointer';
       hit.dataset.id = L.id;
@@ -415,7 +453,12 @@ function renderDrawn(){
         line.setAttribute('stroke', '#d32f2f');
         line.setAttribute('stroke-width', '4.5');
         line.setAttribute('marker-end', 'url(#arrow-red)');
-      }else{
+      } else if(linkDraft.type==='control'){
+        line.classList.add('control');
+        line.setAttribute('stroke', '#2e7d32');
+        line.setAttribute('stroke-width', '3.5');
+        line.setAttribute('marker-end', 'url(#arrow-green)');
+      } else {
         line.setAttribute('stroke', '#1976d2');
         line.setAttribute('stroke-width', '2.5');
         line.setAttribute('marker-end', 'url(#arrow-blue)');
@@ -462,6 +505,7 @@ function renderDrawn(){
       g.appendChild(t2);
 
       g.addEventListener('pointerdown', (e)=>{
+        if(e.detail && e.detail > 1){ return; }
         if(g.setPointerCapture){ try{ g.setPointerCapture(e.pointerId); }catch(_){} }
         const pt = toSvgPoint(e);
         moveStartSnapshot = snapshotBoard();
@@ -493,6 +537,7 @@ function renderDrawn(){
       });
       // also attach on rect for reliable hit
       rect.addEventListener('pointerdown', (e)=>{
+        if(e.detail && e.detail > 1){ return; }
         if(g.setPointerCapture){ try{ g.setPointerCapture(e.pointerId); }catch(_){} }
         const pt = toSvgPoint(e);
         moveStartSnapshot = snapshotBoard();
@@ -510,13 +555,17 @@ function renderDrawn(){
           select(`block:${B.id}`, e.shiftKey||e.metaKey||e.ctrlKey);
         }
       });
-      // Click to select without dragging
-      g.addEventListener('click', (e)=>{ e.stopPropagation(); select(`block:${B.id}`, e.shiftKey||e.metaKey||e.ctrlKey); });
-      g.addEventListener('dblclick', ()=>{
-        pushHistory();
-        const t = prompt('Titre du bloc ?', B.title);
-        if(t!=null){ B.title = t; renderBoard(); }
+      // Support dblclick on rect too (reliability for custom blocks)
+      rect.addEventListener('dblclick', (e)=>{ e.stopPropagation(); openTitleEditor(B); });
+      // And click(detail>=2) for environments not firing dblclick on SVG
+      rect.addEventListener('click', (e)=>{ if(e.detail && e.detail >= 2){ e.stopPropagation(); openTitleEditor(B); } });
+      // Click to select; open editor on double-click (detail>=2 covers some touchpads)
+      g.addEventListener('click', (e)=>{
+        e.stopPropagation();
+        if(e.detail && e.detail >= 2){ openTitleEditor(B); return; }
+        select(`block:${B.id}`, e.shiftKey||e.metaKey||e.ctrlKey);
       });
+      g.addEventListener('dblclick', (e)=>{ e.stopPropagation(); openTitleEditor(B); });
       // Handles au centre des arrêtes
       const handles = [
         { x: B.x + B.w/2, y: B.y },
@@ -747,18 +796,23 @@ function renderDrawn(){
     if(['INPUT','TEXTAREA','SELECT'].includes(tag)) return;
     if(!e.key) return;
     const k = e.key.toLowerCase();
-    if(k==='e' || k==='s'){
+    if(k==='e' || k==='s' || k==='c'){
       const [kind, rawId] = (selectedId||'').split(':');
       if(kind==='block' && rawId){
-        quickLink = { type: k==='e' ? 'energy' : 'signal', fromId: rawId };
+        quickLink = { type: k==='e' ? 'energy' : (k==='c' ? 'control' : 'signal'), fromId: rawId };
         setTool(quickLink.type);
-        showToast(`Clique un autre bloc pour une flèche ${k==='e'?'Énergie':'Signal'}.`);
+        const name = k==='e'?'Énergie':(k==='c'?'Contrôle':'Signal');
+        showToast(`Clique un autre bloc pour une flèche ${name}.`);
       }
     }
   });
 
   // Buttons
-  $('#btn-home').addEventListener('click', ()=>{ showHome(); });
+  const btnHomeTitle = document.getElementById('btn-home-title');
+  if(btnHomeTitle){
+    btnHomeTitle.addEventListener('click', ()=>{ showHome(); });
+    btnHomeTitle.addEventListener('keydown', (e)=>{ if(e.key==='Enter' || e.key===' ') { e.preventDefault(); showHome(); } });
+  }
   $('#btn-solo').addEventListener('click', async ()=>{ await ensureDeck(); state.roomId = 'SOLO'; state.team = teamInput.value.trim()||'Solo'; state.mode='puzzle'; state.ranked=false; enterBoard(); });
   const btnRanked = document.getElementById('btn-ranked');
   const btnSandbox = document.getElementById('btn-sandbox');
@@ -780,6 +834,16 @@ function renderDrawn(){
   });
 
   $('#btn-draw').addEventListener('click', ()=>{ if(!state.deck) return; drawCards(); });
+  const btnAddEmpty = document.getElementById('btn-add-empty-block');
+  if(btnAddEmpty){ btnAddEmpty.addEventListener('click', ()=>{
+    const b = { id:id(), x:snap(240), y:snap(220), w:220, h:90, title:'', category:'Personnalisé' };
+    pushHistory();
+    state.board.blocks.push(b);
+    renderBoard();
+    // Ouvre l'éditeur inline directement
+    openTitleEditor(b);
+    syncIfRoom();
+  }); }
   const btnAddBlock = $('#tool-add-block'); if(btnAddBlock){ btnAddBlock.addEventListener('click', addAdHocBlock); }
   if(toggleGrid){ toggleGrid.addEventListener('change', ()=>{ state.grid = toggleGrid.checked; }); }
 
@@ -794,14 +858,14 @@ function renderDrawn(){
         // Update current problématique display but do not auto-place blocks
         state.drawn.alea = state.puzzle.title || state.puzzle.target || state.puzzle.id;
         aleaDisplay.textContent = state.drawn.alea || '–';
-        // Force puzzle mode and hide draw UI
+        // Force puzzle mode et cacher la pioche
         state.mode = 'puzzle';
-        if(modeDrawBtn){ modeDrawBtn.classList.add('hidden'); }
         updateSidebarVisibility();
+        syncIfRoom();
       } else {
         // When no puzzle selected, re-enable draw button depending on context
-        if(modeDrawBtn){ modeDrawBtn.classList.remove('hidden'); }
         updateSidebarVisibility();
+        syncIfRoom();
       }
     });
   }
@@ -844,7 +908,7 @@ function renderDrawn(){
   $('#btn-save').addEventListener('click', saveToServer);
   $('#btn-load').addEventListener('click', loadFromServer);
   $('#btn-export-png').addEventListener('click', ()=>{ exportPNG(); });
-  $('#btn-export-pdf').addEventListener('click', ()=>{ if(validateBeforeExport()) exportPDF(); });
+  $('#btn-export-pdf').addEventListener('click', ()=>{ exportPDF(); });
   const helpModal = document.getElementById('help-modal');
   $('#btn-help').addEventListener('click', ()=> toggleHelp(true));
   $('#btn-help-close').addEventListener('click', (e)=>{ e.stopPropagation(); toggleHelp(false); });
@@ -869,19 +933,15 @@ function renderDrawn(){
     viewHome.classList.add('hidden');
     viewBoard.classList.remove('hidden');
     renderBoard();
-    // Load puzzles after entering to populate selector
+    // Charger les casse‑têtes
     ensurePuzzles();
-    // Mode gating: Solo/Classé -> puzzle only; sandbox/multi -> libre
-    if(modePanel){
-      if(state.roomId==='SOLO' || state.ranked){
-        state.mode = 'puzzle';
-        if(modeDrawBtn){ modeDrawBtn.classList.add('hidden'); }
-        if(modeHint){ modeHint.classList.remove('hidden'); }
-      } else {
-        if(modeDrawBtn){ modeDrawBtn.classList.remove('hidden'); }
-        if(modeHint){ modeHint.classList.add('hidden'); }
-      }
-      if(typeof setMode === 'function') setMode(state.mode);
+    // Visibilité des panneaux selon le mode
+    if(state.roomId==='SANDBOX'){
+      if(puzzlePanel) puzzlePanel.classList.add('hidden');
+      if(drawPanel) drawPanel.classList.remove('hidden');
+    } else {
+      if(puzzlePanel) puzzlePanel.classList.remove('hidden');
+      updateSidebarVisibility();
     }
     if(state.roomId && state.roomId!=='SOLO' && state.roomId!=='SANDBOX'){
       loadFromServer().finally(()=>{ connectRoomStream(); });
@@ -895,10 +955,14 @@ function renderDrawn(){
     updateSidebarVisibility();
   }
   function updateSidebarVisibility(){
-    if(drawPanel){
-      const allowDraw = ((state.roomId && state.roomId!=='SOLO') || state.roomId==='SANDBOX') && !state.puzzle;
-      drawPanel.classList.toggle('hidden', !(state.mode==='draw' && allowDraw));
+    if(!drawPanel) return;
+    if(state.roomId==='SANDBOX'){
+      drawPanel.classList.remove('hidden');
+      return;
     }
+    const allowDraw = (state.roomId && state.roomId!=='SOLO') && !state.puzzle;
+    const show = state.mode==='draw' && allowDraw;
+    drawPanel.classList.toggle('hidden', !show);
   }
   if(modePuzzleBtn){ modePuzzleBtn.addEventListener('click', ()=> setMode('puzzle')); }
   if(modeDrawBtn){ modeDrawBtn.addEventListener('click', ()=> setMode('draw')); }
@@ -1008,13 +1072,17 @@ function renderDrawn(){
     const pad = 40;
     return { x: Math.floor(minX - pad), y: Math.floor(minY - pad), w: Math.ceil((maxX-minX) + 2*pad), h: Math.ceil((maxY-minY) + 2*pad) };
   }
-  async function svgToPngFull(){
+  async function svgToPngFull(opts={}){
+    const { includeTitle=true } = opts;
     const clone = svg.cloneNode(true);
     // remove selection glow
     $$('.selected', clone).forEach(g=>g.classList.remove('selected'));
+    // remove edge handles so they don't appear
+    $$('.handle', clone).forEach(h=> h.parentNode && h.parentNode.removeChild(h));
     // inline styles for link types to ensure proper rasterization
     $$('.link.energy', clone).forEach(line=>{ line.setAttribute('stroke', '#d32f2f'); line.setAttribute('stroke-width', '4.5'); line.setAttribute('marker-end', 'url(#arrow-red)'); });
-    $$('.link:not(.energy)', clone).forEach(line=>{ line.setAttribute('stroke', '#1976d2'); line.setAttribute('stroke-width', '2.5'); line.setAttribute('marker-end', 'url(#arrow-blue)'); line.setAttribute('stroke-dasharray','6 4'); });
+    $$('.link.control', clone).forEach(line=>{ line.setAttribute('stroke', '#2e7d32'); line.setAttribute('stroke-width', '3.5'); line.setAttribute('marker-end', 'url(#arrow-green)'); line.setAttribute('stroke-dasharray','4 3'); });
+    $$('.link:not(.energy):not(.control)', clone).forEach(line=>{ line.setAttribute('stroke', '#1976d2'); line.setAttribute('stroke-width', '2.5'); line.setAttribute('marker-end', 'url(#arrow-blue)'); line.setAttribute('stroke-dasharray','6 4'); });
     const bbox = computeContentBBox();
     clone.setAttribute('viewBox', `${bbox.x} ${bbox.y} ${bbox.w} ${bbox.h}`);
     const xml = new XMLSerializer().serializeToString(clone);
@@ -1023,11 +1091,49 @@ function renderDrawn(){
     const img = new Image();
     const dataUrl = await new Promise((resolve)=>{
       img.onload = ()=>{
+        // Reserve extra bands: title (top) and legend (bottom)
+        const titleBand = includeTitle ? 48 : 0; // px
+        const legendBand = 56; // px always include legend band to avoid overlap
         const canvas = document.createElement('canvas');
-        canvas.width = Math.max(1, bbox.w); canvas.height = Math.max(1, bbox.h);
+        canvas.width = Math.max(1, bbox.w);
+        canvas.height = Math.max(1, bbox.h + titleBand + legendBand);
         const ctx = canvas.getContext('2d');
         ctx.fillStyle = '#ffffff'; ctx.fillRect(0,0,canvas.width,canvas.height);
-        ctx.drawImage(img,0,0,canvas.width,canvas.height);
+        // Draw title band
+        if(includeTitle){
+          try{
+            const title = (boardTitle && boardTitle.value && boardTitle.value.trim()) ? boardTitle.value.trim() : 'Schéma-bloc';
+            ctx.save();
+            ctx.fillStyle = '#111827';
+            ctx.font = 'bold 18px system-ui,Segoe UI,Roboto,Helvetica,Arial';
+            ctx.textBaseline = 'middle';
+            const tx = 16, ty = Math.round(titleBand/2);
+            ctx.fillText(title, tx, ty);
+            ctx.restore();
+          }catch{}
+        }
+        // Draw board image below title band
+        ctx.drawImage(img, 0, titleBand, canvas.width, bbox.h);
+        // Draw legend in dedicated bottom band (no overlap)
+        try{
+          const margin = 12; let x = margin, y = titleBand + bbox.h + Math.round(legendBand/2) - 16;
+          ctx.save();
+          ctx.font = '12px system-ui,Segoe UI,Roboto,Helvetica,Arial';
+          ctx.textBaseline = 'middle'; ctx.fillStyle = '#111827';
+          // Énergie
+          ctx.strokeStyle = '#d32f2f'; ctx.lineWidth = 4.5; ctx.setLineDash([]);
+          ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x+28, y); ctx.stroke();
+          ctx.fillText('Énergie', x+36, y);
+          // Communication
+          y += 16; ctx.strokeStyle = '#1976d2'; ctx.lineWidth = 2.5; ctx.setLineDash([6,4]);
+          ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x+28, y); ctx.stroke();
+          ctx.setLineDash([]); ctx.fillText('Communication', x+36, y);
+          // Contrôle
+          y += 16; ctx.strokeStyle = '#2e7d32'; ctx.lineWidth = 3.5; ctx.setLineDash([4,3]);
+          ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x+28, y); ctx.stroke();
+          ctx.setLineDash([]); ctx.fillText('Contrôle', x+36, y);
+          ctx.restore();
+        }catch{}
         resolve(canvas.toDataURL('image/png'));
         URL.revokeObjectURL(url);
       };
@@ -1041,26 +1147,24 @@ function renderDrawn(){
 
   // Export PDF (print-friendly)
   async function exportPDF(){
-    const { dataUrl } = await svgToPngFull();
+    // Use image with reserved legend band to avoid overlap, but no title
+    const { dataUrl } = await svgToPngFull({ includeTitle:false });
     const w = window.open('', '_blank');
     const title = 'Construis ton système — Schéma-bloc';
     const meta = `Équipe: ${state.team||'-'} | Problématique: ${state.drawn.alea||'-'}`;
-    const notes = (getNotes()||'').replace(/</g,'&lt;');
     w.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>${title}</title>
       <style>
-        body{font:14px/1.4 system-ui,Segoe UI,Roboto,Helvetica,Arial;padding:24px;color:#111}
-        h1{margin:0 0 6px 0;font-size:20px}
+        body{margin:0;padding:24px;font:14px/1.4 system-ui,Segoe UI,Roboto,Helvetica,Arial;color:#111}
+        h1{margin:0 0 6px 0;font-size:18px}
         .meta{margin-bottom:12px;color:#333}
         img{max-width:100%;border:1px solid #ccc}
-        .notes{margin-top:12px;white-space:pre-wrap}
-        @media print{button{display:none}}
+        @media print{.autoprint{display:none}}
       </style></head><body>
-      <button onclick="window.print()">Imprimer / Exporter en PDF</button>
+      <div class="autoprint"></div>
       <h1>${title}</h1>
       <div class="meta">${meta}</div>
       <img src="${dataUrl}" />
-      <h3>Réponse à la problématique</h3>
-      <div class="notes">${notes}</div>
+      <script>window.onload=function(){ setTimeout(function(){ window.print(); window.close(); }, 200); }<\/script>
       </body></html>`);
     w.document.close();
   }
@@ -1204,15 +1308,22 @@ function renderDrawn(){
     const midy = (from.y+from.h/2 + to.y+to.h/2)/2;
     const rect = svg.getBoundingClientRect();
     const vb = svg.viewBox.baseVal; const sx = rect.width/vb.width; const sy = rect.height/vb.height;
-    const px = rect.left + midx*sx; const py = rect.top + midy*sy;
+    let px = rect.left + midx*sx; let py = rect.top + midy*sy;
     const div = document.createElement('div');
     div.className = 'link-bubble';
+    // Clamp into viewport to avoid overflow
+    const vpw = window.innerWidth, vph = window.innerHeight;
+    const pad = 10;
+    px = Math.max(pad, Math.min(vpw - pad, px));
+    py = Math.max(pad + 40, Math.min(vph - pad, py));
     div.style.left = px+'px'; div.style.top = py+'px';
     const bE = document.createElement('button'); bE.className='energy'; bE.textContent='Énergie';
     const bS = document.createElement('button'); bS.className='signal'; bS.textContent='Communication';
+    const bC = document.createElement('button'); bC.className='signal'; bC.textContent='Contrôle';
     bE.addEventListener('click', ()=>{ pushHistory(); L.type='energy'; renderBoard(); syncIfRoom(); });
     bS.addEventListener('click', ()=>{ pushHistory(); L.type='signal'; renderBoard(); syncIfRoom(); });
-    div.appendChild(bE); div.appendChild(bS);
+    bC.addEventListener('click', ()=>{ pushHistory(); L.type='control'; renderBoard(); syncIfRoom(); });
+    div.appendChild(bE); div.appendChild(bS); div.appendChild(bC);
     document.body.appendChild(div);
     linkBubble = div;
   }
