@@ -312,6 +312,7 @@ function renderDrawn(){
   let rubber = null; // {x1,y1,x2,y2}
   let linkBubble = null; // floating HTML bubble for link type
   let nodeBubble = null; // floating bubble for starting links from a selected block (mobile)
+  let mobileToolbar = null; // floating toolbar (trash on mobile)
   let suppressClearClick = false; // avoid clearing selection right after rubber-band
   let quickLink = null; // {type:'energy'|'signal', fromId}
   let titleEditor = null; // HTML input for inline editing
@@ -321,8 +322,8 @@ function renderDrawn(){
   function openTitleEditor(B){
     closeTitleEditor(false);
     const { sx, sy, rect } = viewScale();
-    const left = rect.left + (B.x + 12) * sx;
-    const top = rect.top + (B.y + 8) * sy;
+    let left = rect.left + (B.x + 12) * sx;
+    let top = rect.top + (B.y + 8) * sy;
     const width = Math.max(60, (B.w - 24) * sx);
     const input = document.createElement('input');
     input.type = 'text';
@@ -332,6 +333,16 @@ function renderDrawn(){
     input.style.width = width + 'px';
     input.value = B.title || '';
     document.body.appendChild(input);
+    // Clamp inside viewport for better mobile behavior
+    try{
+      const vw = window.innerWidth, vh = window.innerHeight;
+      const iw = Math.min(width, Math.round(vw * 0.92));
+      left = Math.max(8, Math.min(vw - iw - 8, left));
+      top = Math.max(8, Math.min(vh - 44, top));
+      input.style.left = left + 'px';
+      input.style.top = top + 'px';
+      input.style.width = iw + 'px';
+    }catch{}
     input.focus(); input.select();
     const onSave = ()=>{ const v = input.value.trim(); if(v !== B.title){ pushHistory(); B.title = v; renderBoard(); syncIfRoom(); } closeTitleEditor(false); };
     const onCancel = ()=>{ closeTitleEditor(false); };
@@ -607,6 +618,7 @@ function renderDrawn(){
     updateLinkOptionsVisibility();
     renderLinkBubble();
     renderNodeBubble();
+    renderMobileToolbar();
   }
 
   function select(idStr, additive=false){
@@ -837,9 +849,16 @@ function renderDrawn(){
 
   // Buttons
   const btnHomeTitle = document.getElementById('btn-home-title');
+  const btnToggleSidebar = document.getElementById('btn-toggle-sidebar');
   if(btnHomeTitle){
     btnHomeTitle.addEventListener('click', ()=>{ showHome(); });
     btnHomeTitle.addEventListener('keydown', (e)=>{ if(e.key==='Enter' || e.key===' ') { e.preventDefault(); showHome(); } });
+  }
+  if(btnToggleSidebar){
+    btnToggleSidebar.addEventListener('click', ()=>{
+      document.body.classList.toggle('sidebar-collapsed');
+      renderBoard();
+    });
   }
   $('#btn-solo').addEventListener('click', async ()=>{ await ensureDeck(); state.roomId = 'SOLO'; state.team = ''; state.mode='puzzle'; state.ranked=false; enterBoard(); });
   const btnRanked = document.getElementById('btn-ranked');
@@ -1238,6 +1257,8 @@ function renderDrawn(){
     try{ await ensureDeck(); }catch{}
     showHome();
     initCollapsiblePanels();
+    // By default, collapse sidebar on small screens
+    if(window.innerWidth < 900){ try{ document.body.classList.add('sidebar-collapsed'); }catch{} }
   })();
 
   function toggleHelp(show){
@@ -1373,7 +1394,7 @@ function renderDrawn(){
     const pad = 10;
     px = Math.max(pad, Math.min(vpw - pad, px));
     py = Math.max(pad + 40, Math.min(vph - pad, py));
-    div.style.left = px+'px'; div.style.top = py+'px';
+    div.style.left = Math.round(px)+'px'; div.style.top = Math.round(py)+'px';
     const bE = document.createElement('button'); bE.className='energy'; bE.textContent='Énergie';
     const bS = document.createElement('button'); bS.className='signal'; bS.textContent='Communication';
     const bC = document.createElement('button'); bC.className='control'; bC.textContent='Contrôle';
@@ -1410,5 +1431,34 @@ function renderDrawn(){
     div.appendChild(bE); div.appendChild(bS); div.appendChild(bC);
     document.body.appendChild(div);
     nodeBubble = div;
+  }
+
+  // Mobile toolbar (trash)
+  function deleteSelection(){
+    if(selected.size===0) return;
+    pushHistory();
+    const blocksToDelete = new Set(Array.from(selected).filter(s=>s.startsWith('block:')).map(s=>s.split(':')[1]));
+    const linksToDelete = new Set(Array.from(selected).filter(s=>s.startsWith('link:')).map(s=>s.split(':')[1]));
+    state.board.links = state.board.links.filter(L => !blocksToDelete.has(L.from) && !blocksToDelete.has(L.to) && !linksToDelete.has(L.id));
+    state.board.blocks = state.board.blocks.filter(b => !blocksToDelete.has(b.id));
+    selected.clear(); selectedId = null;
+    renderBoard();
+    syncIfRoom();
+  }
+  function renderMobileToolbar(){
+    if(mobileToolbar){ try{ mobileToolbar.remove(); }catch(_){} mobileToolbar = null; }
+    if(!(isCoarse || window.innerWidth<900)) return;
+    if(!(selected && selected.size>0)) return;
+    const div = document.createElement('div');
+    div.className = 'mobile-toolbar';
+    const trash = document.createElement('button');
+    trash.className = 'fab danger';
+    trash.title = 'Supprimer';
+    trash.setAttribute('aria-label','Supprimer la sélection');
+    trash.textContent = '🗑';
+    trash.addEventListener('click', deleteSelection);
+    div.appendChild(trash);
+    document.body.appendChild(div);
+    mobileToolbar = div;
   }
 })();
