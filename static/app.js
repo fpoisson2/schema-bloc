@@ -1394,11 +1394,21 @@ function renderDrawn(){
     const from = state.board.blocks.find(b=>b.id===L.from);
     const to = state.board.blocks.find(b=>b.id===L.to);
     if(!from || !to) return;
-    const midx = (from.x+from.w/2 + to.x+to.w/2)/2;
-    const midy = (from.y+from.h/2 + to.y+to.h/2)/2;
+    // Anchor near dragged endpoint if moving; else midpoint
+    let ax, ay;
+    const draggingBlockId = (dragging && dragging.type==='block') ? dragging.id
+                         : (dragging && dragging.type==='multi') ? (dragging.ids && dragging.ids[0])
+                         : null;
+    if(draggingBlockId && (draggingBlockId===from.id || draggingBlockId===to.id)){
+      const B = draggingBlockId===from.id ? from : to;
+      ax = B.x + B.w/2; ay = B.y - 10;
+    } else {
+      ax = (from.x+from.w/2 + to.x+to.w/2)/2;
+      ay = (from.y+from.h/2 + to.y+to.h/2)/2;
+    }
     const rect = svg.getBoundingClientRect();
     const vb = svg.viewBox.baseVal; const sx = rect.width/vb.width; const sy = rect.height/vb.height;
-    let px = rect.left + midx*sx; let py = rect.top + midy*sy;
+    let px = rect.left + ax*sx; let py = rect.top + ay*sy;
     const div = document.createElement('div');
     div.className = 'link-bubble';
     // Clamp into viewport to avoid overflow
@@ -1410,10 +1420,12 @@ function renderDrawn(){
     const bE = document.createElement('button'); bE.className='energy'; bE.textContent='Énergie';
     const bS = document.createElement('button'); bS.className='signal'; bS.textContent='Communication';
     const bC = document.createElement('button'); bC.className='control'; bC.textContent='Contrôle';
+    const bD = document.createElement('button'); bD.className='danger'; bD.title='Supprimer'; bD.textContent='🗑';
     bE.addEventListener('click', ()=>{ pushHistory(); L.type='energy'; renderBoard(); syncIfRoom(); });
     bS.addEventListener('click', ()=>{ pushHistory(); L.type='signal'; renderBoard(); syncIfRoom(); });
     bC.addEventListener('click', ()=>{ pushHistory(); L.type='control'; renderBoard(); syncIfRoom(); });
-    div.appendChild(bE); div.appendChild(bS); div.appendChild(bC);
+    bD.addEventListener('click', ()=>{ pushHistory(); state.board.links = state.board.links.filter(x=>x.id!==L.id); selected.clear(); selectedId=null; renderBoard(); syncIfRoom(); });
+    div.appendChild(bE); div.appendChild(bS); div.appendChild(bC); div.appendChild(bD);
     document.body.appendChild(div);
     linkBubble = div;
   }
@@ -1432,15 +1444,22 @@ function renderDrawn(){
     div.className = 'link-bubble';
     const vpw = window.innerWidth, vph = window.innerHeight; const pad = 10;
     px = Math.max(pad, Math.min(vpw - pad, px)); py = Math.max(pad + 40, Math.min(vph - pad, py));
-    div.style.left = px+'px'; div.style.top = py+'px';
+    div.style.left = Math.round(px)+'px'; div.style.top = Math.round(py)+'px';
     const bE = document.createElement('button'); bE.className='energy'; bE.textContent='Énergie';
     const bS = document.createElement('button'); bS.className='signal'; bS.textContent='Communication';
     const bC = document.createElement('button'); bC.className='control'; bC.textContent='Contrôle';
+    const bD = document.createElement('button'); bD.className='danger'; bD.title='Supprimer'; bD.textContent='🗑';
     function arm(type){ quickLink = { type, fromId: B.id }; setTool(type); showToast('Choisis un autre bloc pour relier.'); try{ div.remove(); }catch{} }
     bE.addEventListener('click', ()=>arm('energy'));
     bS.addEventListener('click', ()=>arm('signal'));
     bC.addEventListener('click', ()=>arm('control'));
-    div.appendChild(bE); div.appendChild(bS); div.appendChild(bC);
+    bD.addEventListener('click', ()=>{
+      pushHistory();
+      state.board.links = state.board.links.filter(L2 => L2.from!==B.id && L2.to!==B.id);
+      state.board.blocks = state.board.blocks.filter(bb => bb.id!==B.id);
+      selected.clear(); selectedId=null; renderBoard(); syncIfRoom();
+    });
+    div.appendChild(bE); div.appendChild(bS); div.appendChild(bC); div.appendChild(bD);
     document.body.appendChild(div);
     nodeBubble = div;
   }
