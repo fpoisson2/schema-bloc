@@ -402,7 +402,12 @@ def room_events(room_id: str):
                 if q in subs:
                     subs.remove(q)
 
-    return Response(stream_with_context(gen()), mimetype="text/event-stream")
+    resp = Response(stream_with_context(gen()), mimetype="text/event-stream")
+    # Hint reverse proxies (nginx, cloudflare) not to buffer SSE
+    resp.headers["Cache-Control"] = "no-cache"
+    resp.headers["X-Accel-Buffering"] = "no"
+    resp.headers["Connection"] = "keep-alive"
+    return resp
 
 
 @app.post("/api/room/<room_id>/sync")
