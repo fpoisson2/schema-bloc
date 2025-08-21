@@ -320,7 +320,20 @@ function renderDrawn(){
   let suppressClearClick = false; // avoid clearing selection right after rubber-band
   let quickLink = null; // {type:'energy'|'signal', fromId}
   let titleEditor = null; // HTML input for inline editing
-  let longPress = null; // {timer, x, y, opened, id}
+  let longPress = null; // {timer, x, y, opened, id} (not used for editing anymore)
+  let lastTap = { t: 0, x: 0, y: 0, id: null };
+  function isDoubleTapOnBlock(evt, blockId){
+    const pt = toSvgPoint(evt);
+    const now = Date.now();
+    const dt = now - (lastTap.t||0);
+    const dx = pt.x - (lastTap.x||0);
+    const dy = pt.y - (lastTap.y||0);
+    const near = (dx*dx + dy*dy) < 400; // within 20px
+    const same = lastTap.id === blockId;
+    const isDouble = dt < 350 && near && same;
+    lastTap = { t: now, x: pt.x, y: pt.y, id: blockId };
+    return isDouble;
+  }
   let liveSyncAt = 0; // throttle timestamp for live sync during drag
   const LIVE_SYNC_EVERY_MS = 160;
 
@@ -529,12 +542,15 @@ function renderDrawn(){
       g.appendChild(t2);
 
       g.addEventListener('pointerdown', (e)=>{
+        // Detect double-tap/click reliably (desktop + mobile)
+        if(isDoubleTapOnBlock(e, B.id)){
+          e.stopPropagation(); e.preventDefault();
+          openTitleEditor(B);
+          return;
+        }
         if(e.detail && e.detail > 1){ return; }
         if(g.setPointerCapture){ try{ g.setPointerCapture(e.pointerId); }catch(_){} }
         const pt = toSvgPoint(e);
-        // arm long-press to edit on touch
-        try{ if(longPress && longPress.timer) clearTimeout(longPress.timer); }catch{}
-        longPress = { x: pt.x, y: pt.y, opened: false, id: B.id, timer: setTimeout(()=>{ openTitleEditor(B); if(longPress) longPress.opened = true; }, 600) };
         moveStartSnapshot = snapshotBoard();
         // Quick link creation if armed
         if(quickLink && quickLink.fromId && quickLink.type){
@@ -564,12 +580,15 @@ function renderDrawn(){
       });
       // also attach on rect for reliable hit
       rect.addEventListener('pointerdown', (e)=>{
+        // Detect double-tap/click reliably (desktop + mobile)
+        if(isDoubleTapOnBlock(e, B.id)){
+          e.stopPropagation(); e.preventDefault();
+          openTitleEditor(B);
+          return;
+        }
         if(e.detail && e.detail > 1){ return; }
         if(g.setPointerCapture){ try{ g.setPointerCapture(e.pointerId); }catch(_){} }
         const pt = toSvgPoint(e);
-        // arm long-press to edit on touch
-        try{ if(longPress && longPress.timer) clearTimeout(longPress.timer); }catch{}
-        longPress = { x: pt.x, y: pt.y, opened: false, id: B.id, timer: setTimeout(()=>{ openTitleEditor(B); if(longPress) longPress.opened = true; }, 600) };
         moveStartSnapshot = snapshotBoard();
         const isSel = selected.has(`block:${B.id}`);
         const multiIds = Array.from(selected).filter(s=>s.startsWith('block:')).map(s=>s.split(':')[1]);
