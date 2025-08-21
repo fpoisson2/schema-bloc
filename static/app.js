@@ -850,6 +850,7 @@ function renderDrawn(){
   // Buttons
   const btnHomeTitle = document.getElementById('btn-home-title');
   const btnToggleSidebar = document.getElementById('btn-toggle-sidebar');
+  const btnFocus = document.getElementById('btn-focus');
   if(btnHomeTitle){
     btnHomeTitle.addEventListener('click', ()=>{ showHome(); });
     btnHomeTitle.addEventListener('keydown', (e)=>{ if(e.key==='Enter' || e.key===' ') { e.preventDefault(); showHome(); } });
@@ -857,6 +858,13 @@ function renderDrawn(){
   if(btnToggleSidebar){
     btnToggleSidebar.addEventListener('click', ()=>{
       document.body.classList.toggle('sidebar-collapsed');
+      renderBoard();
+    });
+  }
+  if(btnFocus){
+    btnFocus.addEventListener('click', ()=>{
+      const on = document.body.classList.toggle('focus-mode');
+      btnFocus.textContent = on ? 'Quitter plein écran' : 'Plein écran';
       renderBoard();
     });
   }
@@ -994,6 +1002,10 @@ function renderDrawn(){
     }
     if(state.roomId && state.roomId!=='SOLO' && state.roomId!=='SANDBOX'){
       loadFromServer().finally(()=>{ connectRoomStream(); });
+    }
+    // Maximize drawing space on mobile by default
+    if(window.innerWidth < 900){
+      try{ document.body.classList.add('sidebar-collapsed'); document.body.classList.add('focus-mode'); if(btnFocus) btnFocus.textContent='Quitter plein écran'; }catch{}
     }
   }
 
@@ -1448,16 +1460,32 @@ function renderDrawn(){
   function renderMobileToolbar(){
     if(mobileToolbar){ try{ mobileToolbar.remove(); }catch(_){} mobileToolbar = null; }
     if(!(isCoarse || window.innerWidth<900)) return;
-    if(!(selected && selected.size>0)) return;
+    const hasSel = selected && selected.size>0;
+    const isFocus = document.body && document.body.classList.contains('focus-mode');
+    if(!hasSel && !isFocus) return;
     const div = document.createElement('div');
     div.className = 'mobile-toolbar';
-    const trash = document.createElement('button');
-    trash.className = 'fab danger';
-    trash.title = 'Supprimer';
-    trash.setAttribute('aria-label','Supprimer la sélection');
-    trash.textContent = '🗑';
-    trash.addEventListener('click', deleteSelection);
-    div.appendChild(trash);
+    if(hasSel){
+      const trash = document.createElement('button');
+      trash.className = 'fab danger';
+      trash.title = 'Supprimer';
+      trash.setAttribute('aria-label','Supprimer la sélection');
+      trash.textContent = '🗑';
+      trash.addEventListener('click', deleteSelection);
+      div.appendChild(trash);
+    }
+    if(isFocus){
+      const exit = document.createElement('button');
+      exit.className = 'fab';
+      exit.title = 'Quitter plein écran';
+      exit.setAttribute('aria-label','Quitter plein écran');
+      exit.textContent = '⤢';
+      exit.addEventListener('click', ()=>{
+        try{ document.body.classList.remove('focus-mode'); if(btnFocus) btnFocus.textContent='Plein écran'; }catch{}
+        renderBoard();
+      });
+      div.appendChild(exit);
+    }
     document.body.appendChild(div);
     mobileToolbar = div;
   }
