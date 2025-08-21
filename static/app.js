@@ -347,6 +347,10 @@ function renderDrawn(){
     const input = document.createElement('input');
     input.type = 'text';
     input.className = 'inline-editor';
+    // Provide stable id/name to play nicely with autofill heuristics
+    try{ input.id = `inline-editor-${B.id}`; }catch{}
+    try{ input.name = 'block-title'; }catch{}
+    try{ input.autocomplete = 'off'; }catch{}
     input.style.left = left + 'px';
     input.style.top = top + 'px';
     input.style.width = width + 'px';
@@ -542,7 +546,7 @@ function renderDrawn(){
       g.appendChild(t2);
 
       g.addEventListener('pointerdown', (e)=>{
-        // Detect double-tap/click reliably (desktop + mobile)
+        // Detect double-tap/click on all devices via pointerdown
         if(isDoubleTapOnBlock(e, B.id)){
           e.stopPropagation(); e.preventDefault();
           openTitleEditor(B);
@@ -578,39 +582,13 @@ function renderDrawn(){
           select(`block:${B.id}`, e.shiftKey||e.metaKey||e.ctrlKey);
         }
       });
-      // also attach on rect for reliable hit
-      rect.addEventListener('pointerdown', (e)=>{
-        // Detect double-tap/click reliably (desktop + mobile)
-        if(isDoubleTapOnBlock(e, B.id)){
-          e.stopPropagation(); e.preventDefault();
-          openTitleEditor(B);
-          return;
-        }
-        if(e.detail && e.detail > 1){ return; }
-        if(g.setPointerCapture){ try{ g.setPointerCapture(e.pointerId); }catch(_){} }
-        const pt = toSvgPoint(e);
-        moveStartSnapshot = snapshotBoard();
-        const isSel = selected.has(`block:${B.id}`);
-        const multiIds = Array.from(selected).filter(s=>s.startsWith('block:')).map(s=>s.split(':')[1]);
-        if(isSel && multiIds.length>1){
-          const offsets = new Map();
-          multiIds.forEach(idb=>{
-            const bb = state.board.blocks.find(b=>b.id===idb);
-            if(bb) offsets.set(idb, { dx: pt.x - bb.x, dy: pt.y - bb.y });
-          });
-          dragging = { type:'multi', ids: multiIds, offsets };
-        } else {
-          dragging = { type:'block', id:B.id, dx: pt.x - B.x, dy: pt.y - B.y };
-          select(`block:${B.id}`, e.shiftKey||e.metaKey||e.ctrlKey);
-        }
-      });
-      // Support dblclick on rect too (reliability for custom blocks)
+      // rely on bubbling to g for pointerdown (avoid duplicate detection)
+      // Support dblclick on rect (desktop/laptop)
       rect.addEventListener('dblclick', (e)=>{ e.stopPropagation(); e.preventDefault(); openTitleEditor(B); });
-      // Also handle mousedown with detail>=2 for browsers not firing dblclick
+      // Also handle mousedown/click fallback with detail>=2 (some browsers don't fire dblclick reliably on SVG)
       rect.addEventListener('mousedown', (e)=>{ if(e.detail && e.detail >= 2){ e.stopPropagation(); e.preventDefault(); openTitleEditor(B); } });
-      // And click(detail>=2) as a fallback
       rect.addEventListener('click', (e)=>{ if(e.detail && e.detail >= 2){ e.stopPropagation(); e.preventDefault(); openTitleEditor(B); } });
-      // Click to select; open editor on double-click (detail>=2 covers some touchpads)
+      // Click to select; open editor on double-click
       g.addEventListener('click', (e)=>{
         e.stopPropagation();
         if(e.detail && e.detail >= 2){ e.preventDefault(); openTitleEditor(B); return; }
@@ -929,8 +907,6 @@ function renderDrawn(){
     pushHistory();
     state.board.blocks.push(b);
     renderBoard();
-    // Ouvre l'éditeur inline directement
-    openTitleEditor(b);
     syncIfRoom();
   }); }
   const btnAddBlock = $('#tool-add-block'); if(btnAddBlock){ btnAddBlock.addEventListener('click', addAdHocBlock); }
