@@ -23,4 +23,5 @@ EXPOSE 5000
 RUN mkdir -p /app/saves
 
 # Default command (override in docker-compose if needed)
-CMD ["gunicorn", "-w", "3", "-b", "0.0.0.0:5000", "wsgi:app"]
+# Disable worker timeout for SSE (infinite streams) and keep 3 workers
+CMD ["gunicorn", "-w", "3", "--timeout", "0", "-b", "0.0.0.0:5000", "wsgi:app"]
