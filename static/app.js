@@ -53,6 +53,9 @@
   const linkSetSignal = document.getElementById('link-set-signal');
   const scoreValue = document.getElementById('score-value');
   const progressBar = document.getElementById('progress-bar');
+  // Presence
+  const clientId = Math.random().toString(36).slice(2,10) + Date.now().toString(36).slice(-4);
+  let roomPresence = [];
 
   // Tools
   let currentTool = 'select';
@@ -346,7 +349,7 @@ function renderDrawn(){
       input.style.top = top + 'px';
       input.style.width = iw + 'px';
     }catch{}
-    input.focus(); input.select();
+    setTimeout(()=>{ try{ input.focus(); input.select(); }catch{} }, 0);
     const onSave = ()=>{ const v = input.value.trim(); if(v !== B.title){ pushHistory(); B.title = v; renderBoard(); syncIfRoom(); } closeTitleEditor(false); };
     const onCancel = ()=>{ closeTitleEditor(false); };
     input.addEventListener('keydown', (e)=>{
@@ -583,16 +586,18 @@ function renderDrawn(){
         }
       });
       // Support dblclick on rect too (reliability for custom blocks)
-      rect.addEventListener('dblclick', (e)=>{ e.stopPropagation(); openTitleEditor(B); });
-      // And click(detail>=2) for environments not firing dblclick on SVG
-      rect.addEventListener('click', (e)=>{ if(e.detail && e.detail >= 2){ e.stopPropagation(); openTitleEditor(B); } });
+      rect.addEventListener('dblclick', (e)=>{ e.stopPropagation(); e.preventDefault(); openTitleEditor(B); });
+      // Also handle mousedown with detail>=2 for browsers not firing dblclick
+      rect.addEventListener('mousedown', (e)=>{ if(e.detail && e.detail >= 2){ e.stopPropagation(); e.preventDefault(); openTitleEditor(B); } });
+      // And click(detail>=2) as a fallback
+      rect.addEventListener('click', (e)=>{ if(e.detail && e.detail >= 2){ e.stopPropagation(); e.preventDefault(); openTitleEditor(B); } });
       // Click to select; open editor on double-click (detail>=2 covers some touchpads)
       g.addEventListener('click', (e)=>{
         e.stopPropagation();
-        if(e.detail && e.detail >= 2){ openTitleEditor(B); return; }
+        if(e.detail && e.detail >= 2){ e.preventDefault(); openTitleEditor(B); return; }
         select(`block:${B.id}`, e.shiftKey||e.metaKey||e.ctrlKey);
       });
-      g.addEventListener('dblclick', (e)=>{ e.stopPropagation(); openTitleEditor(B); });
+      g.addEventListener('dblclick', (e)=>{ e.stopPropagation(); e.preventDefault(); openTitleEditor(B); });
       // Handles au centre des arrêtes
       const handles = [
         { x: B.x + B.w/2, y: B.y },
@@ -1320,7 +1325,8 @@ function renderDrawn(){
   function connectRoomStream(){
     try{ if(es){ es.close(); } }catch{}
     if(!state.roomId || state.roomId==='SOLO') return;
-    es = new EventSource(`/api/room/${state.roomId}/events`);
+    const name = encodeURIComponent(state.team || 'Invité');
+    es = new EventSource(`/api/room/${state.roomId}/events?client=${clientId}&name=${name}`);
     es.addEventListener('state_sync', (e)=>{
       try{
         const data = JSON.parse(e.data||'{}');
@@ -1354,6 +1360,13 @@ function renderDrawn(){
         renderDrawn();
       }catch{}
     });
+    es.addEventListener('presence', (e)=>{
+      try{
+        const data = JSON.parse(e.data||'{}');
+        roomPresence = data.clients || [];
+        renderRoomIndicator();
+      }catch{}
+    });
   }
 
   async function syncIfRoom(){
@@ -1364,6 +1377,15 @@ function renderDrawn(){
       if(boardTitle && boardTitle.value) meta.title = boardTitle.value;
       await api(`/api/room/${state.roomId}/sync`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ team: state.team, state: state.board, meta }) });
     }catch{}
+  }
+
+  function renderRoomIndicator(){
+    if(!roomIndicator){ return; }
+    const count = (roomPresence||[]).length;
+    const names = (roomPresence||[]).map(p=>p.name||'Invité').join(', ');
+    const base = state.roomId ? `Salle: ${state.roomId}` : '';
+    roomIndicator.textContent = count ? `${base} — ${count} en ligne` : base;
+    roomIndicator.title = names || '';
   }
 
   if(boardTitle){ boardTitle.addEventListener('change', syncIfRoom); }

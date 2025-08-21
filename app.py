@@ -27,6 +27,7 @@ app = Flask(__name__, static_folder="static", static_url_path="")
 # --- Simple in-memory pub/sub per room for SSE ---
 _room_lock = threading.Lock()
 _room_subs: dict[str, list[queue.Queue]] = {}
+_room_clients: dict[str, dict[str, dict]] = {}
 
 
 def _publish(room_id: str, event: dict):
@@ -43,6 +44,12 @@ def _sse_format(event: dict) -> str:
     etype = event.get("type", "message")
     data = json.dumps(event.get("data", {}), ensure_ascii=False)
     return f"event: {etype}\n" + "data: " + data + "\n\n"
+
+
+def _presence_snapshot(room_id: str) -> list[dict]:
+    with _room_lock:
+        clients = _room_clients.get(room_id, {})
+        return [{"id": cid, "name": info.get("name") or "Invité"} for cid, info in clients.items()]
 
 
 @app.get("/")
@@ -369,8 +376,14 @@ def api_draw():
 def room_events(room_id: str):
     room_id = (room_id or "").upper()
     q: queue.Queue = queue.Queue()
+    client_id = request.args.get("client") or gen_room_code(8)
+    name = request.args.get("name") or "Invité"
     with _room_lock:
         _room_subs.setdefault(room_id, []).append(q)
+        # register client
+        _room_clients.setdefault(room_id, {})[client_id] = {"name": name, "ts": time.time()}
+    # broadcast presence
+    _publish(room_id, {"type": "presence", "data": {"clients": _presence_snapshot(room_id)}})
 
     def gen():
         # Send initial snapshot if available
@@ -401,6 +414,11 @@ def room_events(room_id: str):
                 subs = _room_subs.get(room_id, [])
                 if q in subs:
                     subs.remove(q)
+                # remove client
+                clients = _room_clients.get(room_id, {})
+                if client_id in clients:
+                    clients.pop(client_id, None)
+            _publish(room_id, {"type": "presence", "data": {"clients": _presence_snapshot(room_id)}})
 
     resp = Response(stream_with_context(gen()), mimetype="text/event-stream")
     # Hint reverse proxies (nginx, cloudflare) not to buffer SSE
