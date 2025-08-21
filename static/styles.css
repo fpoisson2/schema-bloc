@@ -157,3 +157,8 @@ body.sidebar-collapsed .sidebar{display:none}
 .focus-mode .view{padding:0}
 .focus-mode .sidebar{display:none}
 .focus-mode .board-wrap{height:100vh; min-height:100vh; border:none; border-radius:0}
+
+/* Overlay panels in focus mode */
+.overlay-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:2700}
+.focus-mode.overlay-open .sidebar{display:block;position:fixed;top:0;right:0;bottom:0;width:min(420px,92vw);background:var(--panel);border-left:1px solid var(--border);z-index:2800;padding:12px;overflow:auto}
+.focus-mode.overlay-open .sidebar .panel{background:var(--card)}

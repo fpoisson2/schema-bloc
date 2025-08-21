@@ -865,6 +865,7 @@ function renderDrawn(){
     btnFocus.addEventListener('click', ()=>{
       const on = document.body.classList.toggle('focus-mode');
       btnFocus.textContent = on ? 'Quitter plein écran' : 'Plein écran';
+      if(!on){ toggleOverlayPanels(false); }
       renderBoard();
     });
   }
@@ -1478,9 +1479,9 @@ function renderDrawn(){
   }
   function renderMobileToolbar(){
     if(mobileToolbar){ try{ mobileToolbar.remove(); }catch(_){} mobileToolbar = null; }
-    if(!(isCoarse || window.innerWidth<900)) return;
-    const hasSel = selected && selected.size>0;
     const isFocus = document.body && document.body.classList.contains('focus-mode');
+    if(!(isCoarse || window.innerWidth<900 || isFocus)) return;
+    const hasSel = selected && selected.size>0;
     if(!hasSel && !isFocus) return;
     const div = document.createElement('div');
     div.className = 'mobile-toolbar';
@@ -1494,6 +1495,13 @@ function renderDrawn(){
       div.appendChild(trash);
     }
     if(isFocus){
+      const menu = document.createElement('button');
+      menu.className = 'fab';
+      menu.title = 'Ouvrir les menus';
+      menu.setAttribute('aria-label','Ouvrir les menus');
+      menu.textContent = '≡';
+      menu.addEventListener('click', ()=>{ toggleOverlayPanels(); });
+      div.appendChild(menu);
       const exit = document.createElement('button');
       exit.className = 'fab';
       exit.title = 'Quitter plein écran';
@@ -1507,5 +1515,20 @@ function renderDrawn(){
     }
     document.body.appendChild(div);
     mobileToolbar = div;
+  }
+
+  function toggleOverlayPanels(force){
+    const open = (typeof force==='boolean') ? force : !document.body.classList.contains('overlay-open');
+    if(open){
+      document.body.classList.add('overlay-open');
+      const backdrop = document.createElement('div');
+      backdrop.className = 'overlay-backdrop';
+      backdrop.id = 'overlay-backdrop';
+      backdrop.addEventListener('click', ()=> toggleOverlayPanels(false));
+      document.body.appendChild(backdrop);
+    } else {
+      document.body.classList.remove('overlay-open');
+      const el = document.getElementById('overlay-backdrop'); if(el) try{ el.remove(); }catch{}
+    }
   }
 })();
