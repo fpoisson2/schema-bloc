@@ -68,6 +68,7 @@
   const svgNS = 'http://www.w3.org/2000/svg';
   const svg = document.createElementNS(svgNS, 'svg');
   const isCoarse = (("matchMedia" in window) && matchMedia('(pointer: coarse)').matches) || (navigator.maxTouchPoints>0) || ('ontouchstart' in window);
+  const smallScreen = () => window.innerWidth < 900;
   svg.classList.add('svg-board');
   svg.setAttribute('width', '100%');
   svg.setAttribute('height', '100%');
@@ -99,7 +100,7 @@
   const id = () => Math.random().toString(36).slice(2,10);
   const clamp = (v,min,max)=>Math.max(min,Math.min(max,v));
   const snap = (v)=> state.grid ? Math.round(v/20)*20 : v;
-  function defaultBlockSize(){ return (isCoarse || window.innerWidth<900) ? { w: 280, h: 120 } : { w: 220, h: 90 }; }
+  function defaultBlockSize(){ return smallScreen() ? { w: 280, h: 120 } : { w: 220, h: 90 }; }
 
   function categoryColor(cat){
     switch(cat){
@@ -507,7 +508,7 @@ function renderDrawn(){
       t1.setAttribute('x', B.x + 12); t1.setAttribute('y', B.y + 28);
       t1.setAttribute('class','title');
       t1.setAttribute('fill', '#111827');
-      t1.setAttribute('font-size', (isCoarse || window.innerWidth<900) ? '22' : '16');
+      t1.setAttribute('font-size', smallScreen() ? '22' : '16');
       t1.setAttribute('font-weight', '700');
       t1.textContent = B.title;
       g.appendChild(t1);
@@ -517,7 +518,7 @@ function renderDrawn(){
       t2.setAttribute('x', B.x + 12); t2.setAttribute('y', B.y + 52);
       t2.setAttribute('class','category');
       t2.setAttribute('fill', categoryColor(B.category));
-      t2.setAttribute('font-size', (isCoarse || window.innerWidth<900) ? '15' : '12');
+      t2.setAttribute('font-size', smallScreen() ? '15' : '12');
       t2.setAttribute('font-weight', '700');
       t2.textContent = B.category;
       g.appendChild(t2);
@@ -597,7 +598,7 @@ function renderDrawn(){
         { x: B.x + B.w/2, y: B.y + B.h },
         { x: B.x, y: B.y + B.h/2 },
       ];
-      const handleR = (isCoarse || window.innerWidth<900) ? 12 : 9;
+      const handleR = smallScreen() ? 12 : 9;
       handles.forEach(h => {
         const c = document.createElementNS(svgNS,'circle');
         c.setAttribute('cx', h.x); c.setAttribute('cy', h.y);
@@ -1005,11 +1006,18 @@ function renderDrawn(){
     if(state.roomId && state.roomId!=='SOLO' && state.roomId!=='SANDBOX'){
       loadFromServer().finally(()=>{ connectRoomStream(); });
     }
-    // Maximize drawing space by default in schema mode
+    // Maximize drawing space by default only on small screens
     try{
-      document.body.classList.add('sidebar-collapsed');
-      document.body.classList.add('focus-mode');
-      if(btnFocus) btnFocus.textContent='Quitter plein écran';
+      if(window.innerWidth < 900){
+        document.body.classList.add('sidebar-collapsed');
+        document.body.classList.add('focus-mode');
+        if(btnFocus) btnFocus.textContent='Quitter plein écran';
+      } else {
+        document.body.classList.remove('focus-mode');
+        document.body.classList.remove('overlay-open');
+        const el = document.getElementById('overlay-backdrop'); if(el) el.remove();
+        if(btnFocus) btnFocus.textContent='Plein écran';
+      }
     }catch{}
   }
 

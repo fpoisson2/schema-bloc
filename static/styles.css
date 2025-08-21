@@ -164,8 +164,8 @@ body.sidebar-collapsed .sidebar{display:none}
 .focus-mode.overlay-open .sidebar{display:block;position:fixed;top:0;right:0;bottom:0;width:min(420px,92vw);background:var(--panel);border-left:1px solid var(--border);z-index:2800;padding:12px;overflow:auto}
 .focus-mode.overlay-open .sidebar .panel{background:var(--card)}
 
-/* Mobile typography scaling */
-@media (max-width: 600px){
+/* Mobile typography scaling (coarse pointer) */
+@media (pointer: coarse){
   body{font-size:18px}
   .card-item{font-size:17px}
   .link-bubble button{font-size:16px}
