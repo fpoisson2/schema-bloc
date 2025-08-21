@@ -170,4 +170,7 @@ body.sidebar-collapsed .sidebar{display:none}
   .card-item{font-size:17px}
   .link-bubble button{font-size:16px}
   .inline-editor{font-size:20px}
+  /* Force bigger block text on mobile */
+  .block .title{font-size:22px !important}
+  .block .category{font-size:15px !important}
 }

@@ -318,6 +318,8 @@ function renderDrawn(){
   let quickLink = null; // {type:'energy'|'signal', fromId}
   let titleEditor = null; // HTML input for inline editing
   let longPress = null; // {timer, x, y, opened, id}
+  let liveSyncAt = 0; // throttle timestamp for live sync during drag
+  const LIVE_SYNC_EVERY_MS = 160;
 
   function viewScale(){ const rect = svg.getBoundingClientRect(); const vb = svg.viewBox.baseVal; return { sx: rect.width/vb.width, sy: rect.height/vb.height, rect }; }
   function openTitleEditor(B){
@@ -650,6 +652,9 @@ function renderDrawn(){
       B.x = snap(pt.x - dragging.dx);
       B.y = snap(pt.y - dragging.dy);
       renderBoard();
+      // live sync (throttled) for classroom mode
+      const now = Date.now();
+      if(state.roomId && state.roomId!=='SOLO' && now - liveSyncAt > LIVE_SYNC_EVERY_MS){ liveSyncAt = now; syncIfRoom(); }
     } else if(dragging && dragging.type==='multi'){
       dragging.ids.forEach(idb=>{
         const bb = state.board.blocks.find(b=>b.id===idb);
@@ -657,6 +662,8 @@ function renderDrawn(){
         if(bb && off){ bb.x = snap(pt.x - off.dx); bb.y = snap(pt.y - off.dy); }
       });
       renderBoard();
+      const now = Date.now();
+      if(state.roomId && state.roomId!=='SOLO' && now - liveSyncAt > LIVE_SYNC_EVERY_MS){ liveSyncAt = now; syncIfRoom(); }
     } else if(linkDraft){
       linkDraft.x2 = pt.x; linkDraft.y2 = pt.y; renderBoard();
     } else if(rubber){
@@ -858,6 +865,7 @@ function renderDrawn(){
   }
   if(btnToggleSidebar){
     btnToggleSidebar.addEventListener('click', ()=>{
+      if(window.innerWidth >= 900) return; // ignore on desktop
       document.body.classList.toggle('sidebar-collapsed');
       renderBoard();
     });
@@ -978,6 +986,23 @@ function renderDrawn(){
 
   async function ensureDeck(){ if(!state.deck) await loadDeck(); }
   async function ensurePuzzles(){ if(!state.puzzles.length) await loadPuzzles(); }
+  async function setPuzzleById(puzzleId, { fromRemote=false } = {}){
+    if(!puzzleId){
+      state.puzzle = null;
+      if(puzzleSelect){ puzzleSelect.value = ''; }
+      renderPuzzleDetails();
+      updateSidebarVisibility();
+      if(!fromRemote) syncIfRoom();
+      return;
+    }
+    await ensurePuzzles();
+    const p = state.puzzles.find(x=>x.id===puzzleId) || null;
+    state.puzzle = p;
+    if(puzzleSelect){ puzzleSelect.value = p ? p.id : ''; }
+    renderPuzzleDetails();
+    if(p){ state.mode = 'puzzle'; updateSidebarVisibility(); }
+    if(!fromRemote) syncIfRoom();
+  }
 
   function showHome(){
     viewHome.classList.remove('hidden');
@@ -1123,6 +1148,7 @@ function renderDrawn(){
       state.board = data.state || state.board;
       state.drawn.alea = (data.meta && data.meta.alea) || state.drawn.alea;
       setNotes((data.meta && data.meta.notes) || '');
+      if(data.meta && data.meta.puzzleId){ await setPuzzleById(data.meta.puzzleId, { fromRemote:true }); }
       if(teamDisplay) teamDisplay.textContent = state.team;
       aleaDisplay.textContent = state.drawn.alea||'–';
       renderBoard();
@@ -1304,6 +1330,7 @@ function renderDrawn(){
           state.drawn.alea = data.meta.alea || state.drawn.alea;
           setNotes(data.meta.notes || '');
           if(boardTitle) boardTitle.value = data.meta.title || '';
+          if(data.meta.puzzleId){ setPuzzleById(data.meta.puzzleId, { fromRemote:true }); }
         }
         if(teamDisplay) teamDisplay.textContent = state.team||'–';
         aleaDisplay.textContent = state.drawn.alea||'–';
@@ -1333,6 +1360,7 @@ function renderDrawn(){
     if(!state.roomId || state.roomId==='SOLO') return;
     try{
       const meta = { alea: state.drawn.alea, notes: getNotes() };
+      if(state.puzzle && state.puzzle.id){ meta.puzzleId = state.puzzle.id; }
       if(boardTitle && boardTitle.value) meta.title = boardTitle.value;
       await api(`/api/room/${state.roomId}/sync`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ team: state.team, state: state.board, meta }) });
     }catch{}
