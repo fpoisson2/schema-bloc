@@ -18,6 +18,7 @@ select{width:100%;padding:8px;border-radius:6px;border:1px solid var(--border);b
 .titlebar input{width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;background:#fff}
 .top-actions{display:flex;gap:8px;justify-content:flex-end;align-items:center}
 .mobile-only{display:none}
+.home #btn-toggle-sidebar, .home #btn-focus{display:none}
 .home .titlebar{display:none}
 
 .view{display:flex;gap:16px;padding:16px;max-width:1400px;margin:0 auto}
@@ -121,7 +122,7 @@ select{width:100%;padding:8px;border-radius:6px;border:1px solid var(--border);b
   .view{flex-direction:column; padding:0}
   .mobile-only{display:inline-flex}
   .sidebar{width:100%}
-  .board-wrap{height:calc(100vh - 56px); min-height:calc(100vh - 56px); border-radius:0; border-left:none; border-right:none}
+  .board-wrap{height:calc(100svh - 56px); min-height:calc(100svh - 56px); border-radius:0; border-left:none; border-right:none}
 }
 @media (max-width: 600px){
   .topbar{grid-template-columns:1fr auto; grid-template-areas: 'brand actions' 'titlebar titlebar'}
@@ -135,7 +136,7 @@ select{width:100%;padding:8px;border-radius:6px;border:1px solid var(--border);b
 /* Hide sidebar on mobile when collapsed */
 body.sidebar-collapsed .sidebar{display:none}
 @media (max-width: 900px){
-  body.sidebar-collapsed .board-wrap{height:calc(100vh - 56px)}
+  body.sidebar-collapsed .board-wrap{height:calc(100svh - 56px)}
 }
 
 /* Floating toolbar (mobile) */
@@ -156,9 +157,17 @@ body.sidebar-collapsed .sidebar{display:none}
 .focus-mode .topbar{display:none}
 .focus-mode .view{padding:0}
 .focus-mode .sidebar{display:none}
-.focus-mode .board-wrap{height:100vh; min-height:100vh; border:none; border-radius:0}
+.focus-mode .board-wrap{height:100svh; min-height:100svh; border:none; border-radius:0}
 
 /* Overlay panels in focus mode */
 .overlay-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:2700}
 .focus-mode.overlay-open .sidebar{display:block;position:fixed;top:0;right:0;bottom:0;width:min(420px,92vw);background:var(--panel);border-left:1px solid var(--border);z-index:2800;padding:12px;overflow:auto}
 .focus-mode.overlay-open .sidebar .panel{background:var(--card)}
+
+/* Mobile typography scaling */
+@media (max-width: 600px){
+  body{font-size:17px}
+  .card-item{font-size:16px}
+  .link-bubble button{font-size:15px}
+  .inline-editor{font-size:18px}
+}

@@ -983,6 +983,7 @@ function renderDrawn(){
     viewBoard.classList.add('hidden');
     roomIndicator.textContent = '';
     try{ document.body.classList.add('home'); }catch{}
+    try{ document.body.classList.remove('focus-mode'); document.body.classList.remove('overlay-open'); const el = document.getElementById('overlay-backdrop'); if(el) el.remove(); }catch{}
   }
   function enterBoard(){
     if(teamDisplay) teamDisplay.textContent = state.team||'–';
@@ -1004,10 +1005,12 @@ function renderDrawn(){
     if(state.roomId && state.roomId!=='SOLO' && state.roomId!=='SANDBOX'){
       loadFromServer().finally(()=>{ connectRoomStream(); });
     }
-    // Maximize drawing space on mobile by default
-    if(window.innerWidth < 900){
-      try{ document.body.classList.add('sidebar-collapsed'); document.body.classList.add('focus-mode'); if(btnFocus) btnFocus.textContent='Quitter plein écran'; }catch{}
-    }
+    // Maximize drawing space by default in schema mode
+    try{
+      document.body.classList.add('sidebar-collapsed');
+      document.body.classList.add('focus-mode');
+      if(btnFocus) btnFocus.textContent='Quitter plein écran';
+    }catch{}
   }
 
   // Mode switching helpers
@@ -1414,9 +1417,9 @@ function renderDrawn(){
     div.className = 'link-bubble';
     // Clamp into viewport to avoid overflow
     const vpw = window.innerWidth, vph = window.innerHeight;
-    const pad = 10;
+    const pad = 8;
     px = Math.max(pad, Math.min(vpw - pad, px));
-    py = Math.max(pad + 40, Math.min(vph - pad, py));
+    py = Math.max(pad + 16, Math.min(vph - pad, py));
     div.style.left = Math.round(px)+'px'; div.style.top = Math.round(py)+'px';
     const bE = document.createElement('button'); bE.className='energy'; bE.textContent='Énergie';
     const bS = document.createElement('button'); bS.className='signal'; bS.textContent='Communication';
@@ -1440,11 +1443,11 @@ function renderDrawn(){
     const B = state.board.blocks.find(b=>b.id===rawId);
     if(!B) return;
     const rect = svg.getBoundingClientRect(); const vb = svg.viewBox.baseVal; const sx = rect.width/vb.width; const sy = rect.height/vb.height;
-    let px = rect.left + (B.x + B.w/2) * sx; let py = rect.top + (B.y) * sy;
+    let px = rect.left + (B.x + B.w/2) * sx; let py = rect.top + (B.y - 6) * sy;
     const div = document.createElement('div');
     div.className = 'link-bubble';
-    const vpw = window.innerWidth, vph = window.innerHeight; const pad = 10;
-    px = Math.max(pad, Math.min(vpw - pad, px)); py = Math.max(pad + 40, Math.min(vph - pad, py));
+    const vpw = window.innerWidth, vph = window.innerHeight; const pad = 8;
+    px = Math.max(pad, Math.min(vpw - pad, px)); py = Math.max(pad + 16, Math.min(vph - pad, py));
     div.style.left = Math.round(px)+'px'; div.style.top = Math.round(py)+'px';
     const bE = document.createElement('button'); bE.className='energy'; bE.textContent='Énergie';
     const bS = document.createElement('button'); bS.className='signal'; bS.textContent='Communication';
