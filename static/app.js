@@ -9,6 +9,7 @@
   const state = {
     deck: null,
     puzzles: [],
+    corrige: null, // answer key (by puzzle id)
     puzzle: null, // selected puzzle object
     roomId: null,
     team: "",
@@ -149,6 +150,16 @@
         }
       }
     }catch(e){ /* silently ignore if not available */ }
+  }
+
+  // Load corrigé (answer key per puzzle)
+  async function loadCorrige(){
+    try{
+      const data = await api('/corrige.json');
+      if(data && typeof data === 'object'){
+        state.corrige = data;
+      }
+    }catch(e){ /* optional file; ignore if missing */ }
   }
 
   function escapeHtml(s){ return String(s||'').replace(/[&<>"']/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c])); }
@@ -1305,6 +1316,7 @@ function renderDrawn(){
   (async function init(){
     initTools();
     try{ await ensureDeck(); }catch{}
+    try{ await loadCorrige(); }catch{}
     showHome();
     initCollapsiblePanels();
     // By default, collapse sidebar on small screens
@@ -1387,7 +1399,50 @@ function renderDrawn(){
   if(aleaNotes){ aleaNotes.addEventListener('change', syncIfRoom); }
 
   // --- Scoring & progression ---
-  function computeScore(){
+  // Normalize labels for matching corrigé ↔ blocs
+  function normalizeLabel(s){
+    try{
+      return String(s||'')
+        .normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g,' ')
+        .trim()
+        .replace(/\s+/g,' ');
+    }catch{ return String(s||'').toLowerCase().trim(); }
+  }
+
+  function computeCorrigeMatch(){
+    const p = state.puzzle;
+    const key = state.corrige;
+    if(!p || !key) return null;
+    const spec = key[p.id];
+    if(!spec || !Array.isArray(spec.links) || spec.links.length===0) return null;
+    const byTitle = new Map();
+    state.board.blocks.forEach(b=>{
+      const k = normalizeLabel(b.title);
+      if(!k) return;
+      if(!byTitle.has(k)) byTitle.set(k, []);
+      byTitle.get(k).push(b.id);
+    });
+    function hasLink(fromLbl, toLbl, type){
+      const fromIds = byTitle.get(normalizeLabel(fromLbl)) || [];
+      const toIds = byTitle.get(normalizeLabel(toLbl)) || [];
+      if(fromIds.length===0 || toIds.length===0) return false;
+      for(const f of fromIds){
+        for(const t of toIds){
+          if(state.board.links.some(L => L.from===f && L.to===t && (L.type||'signal')===type)) return true;
+        }
+      }
+      return false;
+    }
+    let correct = 0;
+    const expected = spec.links.length;
+    spec.links.forEach(l => { if(hasLink(l.from, l.to, l.type||'signal')) correct++; });
+    const percent = expected>0 ? Math.round((correct/expected)*100) : 0;
+    return { applicable: true, correct, expected, percent };
+  }
+
+  function computeHeuristicScore(){
     let score = 0;
     const blocks = state.board.blocks.length;
     const links = state.board.links.length;
@@ -1410,12 +1465,23 @@ function renderDrawn(){
   }
   function renderScore(){
     if(!scoreValue || !progressBar) return;
-    const s = computeScore();
-    scoreValue.textContent = String(s);
-    const lvl = Math.floor(s/60);
-    const pct = Math.min(100, Math.round((s - lvl*60)/60*100));
-    progressBar.style.width = pct + '%';
-    progressBar.title = `Niveau ${lvl} — ${pct}%`;
+    const match = computeCorrigeMatch();
+    const hintEl = document.getElementById('score-hint');
+    if(match && match.applicable){
+      const s = match.percent;
+      scoreValue.textContent = `${s}%`;
+      progressBar.style.width = `${s}%`;
+      progressBar.title = `Corrigé — ${match.correct}/${match.expected}`;
+      if(hintEl){ hintEl.textContent = `Corrigé: ${match.correct}/${match.expected} liens corrects`; }
+    } else {
+      const s = computeHeuristicScore();
+      scoreValue.textContent = String(s);
+      const lvl = Math.floor(s/60);
+      const pct = Math.min(100, Math.round((s - lvl*60)/60*100));
+      progressBar.style.width = pct + '%';
+      progressBar.title = `Niveau ${lvl} — ${pct}%`;
+      if(hintEl){ hintEl.textContent = 'Gagne des points avec des blocs reliés, les deux types de flèches et une réponse détaillée.'; }
+    }
   }
 
   function updateLinkOptionsVisibility(){

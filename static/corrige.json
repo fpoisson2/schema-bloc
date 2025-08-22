@@ -1,0 +1,28 @@
+{
+  "pz-001": {
+    "title": "Ventile la serre quand il fait chaud",
+    "links": [
+      { "from": "Batterie 12 V", "to": "Régulateur (stabilise)", "type": "energy" },
+      { "from": "Régulateur (stabilise)", "to": "Ventilateur", "type": "energy" },
+      { "from": "Capteur température", "to": "Interrupteur", "type": "control" },
+      { "from": "Interrupteur", "to": "Ventilateur", "type": "control" }
+    ]
+  },
+  "pz-003": {
+    "title": "Charger un téléphone avec le soleil",
+    "links": [
+      { "from": "Soleil (panneau)", "to": "Régulateur (stabilise)", "type": "energy" },
+      { "from": "Régulateur (stabilise)", "to": "Convertisseur DC/DC", "type": "energy" },
+      { "from": "Convertisseur DC/DC", "to": "Chargeur de téléphone", "type": "energy" }
+    ]
+  },
+  "pz-010": {
+    "title": "Vélo qui recharge un téléphone",
+    "links": [
+      { "from": "Dynamo (vélo)", "to": "Régulateur (stabilise)", "type": "energy" },
+      { "from": "Régulateur (stabilise)", "to": "Convertisseur DC/DC", "type": "energy" },
+      { "from": "Convertisseur DC/DC", "to": "Chargeur de téléphone", "type": "energy" }
+    ]
+  }
+}
+
