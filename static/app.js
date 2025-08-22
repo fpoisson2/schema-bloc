@@ -1417,29 +1417,47 @@ function renderDrawn(){
     if(!p || !key) return null;
     const spec = key[p.id];
     if(!spec || !Array.isArray(spec.links) || spec.links.length===0) return null;
-    const byTitle = new Map();
-    state.board.blocks.forEach(b=>{
-      const k = normalizeLabel(b.title);
-      if(!k) return;
-      if(!byTitle.has(k)) byTitle.set(k, []);
-      byTitle.get(k).push(b.id);
-    });
-    function hasLink(fromLbl, toLbl, type){
-      const fromIds = byTitle.get(normalizeLabel(fromLbl)) || [];
-      const toIds = byTitle.get(normalizeLabel(toLbl)) || [];
-      if(fromIds.length===0 || toIds.length===0) return false;
-      for(const f of fromIds){
-        for(const t of toIds){
-          if(state.board.links.some(L => L.from===f && L.to===t && (L.type||'signal')===type)) return true;
-        }
-      }
-      return false;
-    }
-    let correct = 0;
+    // Normalize expected links
     const expected = spec.links.length;
-    spec.links.forEach(l => { if(hasLink(l.from, l.to, l.type||'signal')) correct++; });
-    const percent = expected>0 ? Math.round((correct/expected)*100) : 0;
-    return { applicable: true, correct, expected, percent };
+    const remaining = spec.links.map(l => ({ from: normalizeLabel(l.from), to: normalizeLabel(l.to), type: (l.type||'signal') }));
+    const allowedLabels = new Set(remaining.flatMap(l => [l.from, l.to]));
+    // Gather user links scoped to allowed labels
+    let correct = 0, extras = 0;
+    state.board.links.forEach(L => {
+      const from = state.board.blocks.find(b=>b.id===L.from);
+      const to = state.board.blocks.find(b=>b.id===L.to);
+      if(!from || !to) return;
+      const f = normalizeLabel(from.title);
+      const t = normalizeLabel(to.title);
+      if(!(allowedLabels.has(f) && allowedLabels.has(t))) return; // ignore outside scope
+      const typ = (L.type||'signal');
+      const idx = remaining.findIndex(r => r && r.from===f && r.to===t && r.type===typ);
+      if(idx !== -1){ correct++; remaining[idx] = null; } else { extras++; }
+    });
+    const raw = expected>0 ? ((correct - extras) / expected) : 0;
+    const percent = Math.max(0, Math.min(100, Math.round(raw * 100)));
+    return { applicable: true, correct, expected, extras, percent, scope: allowedLabels };
+  }
+
+  function computeAlignmentPercent(scope){
+    const tol = 12; // px
+    let considered = 0, aligned = 0;
+    state.board.links.forEach(L => {
+      const from = state.board.blocks.find(b=>b.id===L.from);
+      const to = state.board.blocks.find(b=>b.id===L.to);
+      if(!from || !to) return;
+      if(scope){
+        const f = normalizeLabel(from.title);
+        const t = normalizeLabel(to.title);
+        if(!(scope.has(f) && scope.has(t))) return;
+      }
+      considered++;
+      const fc = { x: from.x + from.w/2, y: from.y + from.h/2 };
+      const tc = { x: to.x + to.w/2, y: to.y + to.h/2 };
+      if(Math.abs(fc.x - tc.x) <= tol || Math.abs(fc.y - tc.y) <= tol) aligned++;
+    });
+    if(considered===0) return 0;
+    return Math.round((aligned/considered)*100);
   }
 
   function computeHeuristicScore(){
@@ -1463,16 +1481,20 @@ function renderDrawn(){
     }
     return Math.max(0, score);
   }
+  let lastScoreWas100 = false;
   function renderScore(){
     if(!scoreValue || !progressBar) return;
     const match = computeCorrigeMatch();
     const hintEl = document.getElementById('score-hint');
     if(match && match.applicable){
-      const s = match.percent;
-      scoreValue.textContent = `${s}%`;
-      progressBar.style.width = `${s}%`;
-      progressBar.title = `Corrigé — ${match.correct}/${match.expected}`;
-      if(hintEl){ hintEl.textContent = `Corrigé: ${match.correct}/${match.expected} liens corrects`; }
+      const align = computeAlignmentPercent(match.scope);
+      const total = Math.round(0.8*match.percent + 0.2*align);
+      scoreValue.textContent = `${total}%`;
+      progressBar.style.width = `${total}%`;
+      progressBar.title = `Corrigé ${match.correct}/${match.expected} • Extras ${match.extras||0} • Align ${align}%`;
+      if(hintEl){ hintEl.textContent = `Corrigé: ${match.correct}/${match.expected} • Extras: ${match.extras||0} • Alignement: ${align}%`; }
+      if(total === 100 && !lastScoreWas100){ lastScoreWas100 = true; try{ launchFireworks(); }catch{} }
+      if(total < 100){ lastScoreWas100 = false; }
     } else {
       const s = computeHeuristicScore();
       scoreValue.textContent = String(s);
@@ -1481,7 +1503,49 @@ function renderDrawn(){
       progressBar.style.width = pct + '%';
       progressBar.title = `Niveau ${lvl} — ${pct}%`;
       if(hintEl){ hintEl.textContent = 'Gagne des points avec des blocs reliés, les deux types de flèches et une réponse détaillée.'; }
+      lastScoreWas100 = false;
     }
+  }
+
+  // Simple fireworks/confetti when reaching 100%
+  function launchFireworks(){
+    let canvas = document.getElementById('fw-canvas');
+    if(!canvas){
+      canvas = document.createElement('canvas');
+      canvas.id = 'fw-canvas';
+      Object.assign(canvas.style, { position:'fixed', inset:'0', width:'100%', height:'100%', pointerEvents:'none', zIndex:2000 });
+      document.body.appendChild(canvas);
+      const onResize = ()=>{ canvas.width = window.innerWidth; canvas.height = window.innerHeight; };
+      window.addEventListener('resize', onResize);
+      onResize();
+    } else { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
+    const ctx = canvas.getContext('2d');
+    const colors = ['#ff3b30','#ff9500','#ffcc00','#4cd964','#5ac8fa','#007aff','#5856d6','#ff2d55'];
+    const particles = [];
+    function burst(x,y){
+      const n = 80;
+      for(let i=0;i<n;i++){
+        const angle = Math.random()*Math.PI*2;
+        const speed = 2 + Math.random()*3.5;
+        particles.push({ x, y, vx: Math.cos(angle)*speed, vy: Math.sin(angle)*speed, life: 60+Math.random()*30, color: colors[(Math.random()*colors.length)|0] });
+      }
+    }
+    const W = canvas.width, H = canvas.height;
+    for(let i=0;i<5;i++) burst(Math.random()*W*0.8 + 0.1*W, Math.random()*H*0.5 + 0.1*H);
+    let frame = 0;
+    (function anim(){
+      frame++;
+      ctx.clearRect(0,0,canvas.width,canvas.height);
+      particles.forEach(p=>{
+        p.vy += 0.05; p.x += p.vx; p.y += p.vy; p.life -= 1;
+        ctx.globalAlpha = Math.max(0, Math.min(1, p.life/90));
+        ctx.fillStyle = p.color;
+        ctx.beginPath(); ctx.arc(p.x, p.y, 2.2, 0, Math.PI*2); ctx.fill();
+      });
+      for(let i=particles.length-1;i>=0;i--){ if(particles[i].life<=0) particles.splice(i,1); }
+      if(frame < 180 && particles.length){ requestAnimationFrame(anim); }
+      else { ctx.clearRect(0,0,canvas.width,canvas.height); }
+    })();
   }
 
   function updateLinkOptionsVisibility(){

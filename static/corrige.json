@@ -1,28 +1,884 @@
 {
-  "pz-001": {
-    "title": "Ventile la serre quand il fait chaud",
-    "links": [
-      { "from": "Batterie 12 V", "to": "Régulateur (stabilise)", "type": "energy" },
-      { "from": "Régulateur (stabilise)", "to": "Ventilateur", "type": "energy" },
-      { "from": "Capteur température", "to": "Interrupteur", "type": "control" },
-      { "from": "Interrupteur", "to": "Ventilateur", "type": "control" }
-    ]
-  },
-  "pz-003": {
-    "title": "Charger un téléphone avec le soleil",
-    "links": [
-      { "from": "Soleil (panneau)", "to": "Régulateur (stabilise)", "type": "energy" },
-      { "from": "Régulateur (stabilise)", "to": "Convertisseur DC/DC", "type": "energy" },
-      { "from": "Convertisseur DC/DC", "to": "Chargeur de téléphone", "type": "energy" }
-    ]
-  },
-  "pz-010": {
-    "title": "Vélo qui recharge un téléphone",
-    "links": [
-      { "from": "Dynamo (vélo)", "to": "Régulateur (stabilise)", "type": "energy" },
-      { "from": "Régulateur (stabilise)", "to": "Convertisseur DC/DC", "type": "energy" },
-      { "from": "Convertisseur DC/DC", "to": "Chargeur de téléphone", "type": "energy" }
-    ]
-  }
+"pz-001": {
+"title": "Ventile la serre quand il fait chaud",
+"links": [
+{ "from": "Batterie 12 V", "to": "Régulateur (stabilise)", "type": "energy" },
+{ "from": "Régulateur (stabilise)", "to": "Ventilateur", "type": "energy" },
+{ "from": "Capteur température", "to": "Interrupteur", "type": "control" },
+{ "from": "Interrupteur", "to": "Ventilateur", "type": "control" }
+]
+},
+"pz-002": {
+"title": "Ferme la fenêtre quand il pleut",
+"links": [
+{ "from": "Batterie 12 V", "to": "Convertisseur DC/DC", "type": "energy" },
+{ "from": "Convertisseur DC/DC", "to": "Moteur", "type": "energy" },
+{ "from": "Capteur pluie", "to": "Ordinateur", "type": "control" },
+{ "from": "Bouton poussoir", "to": "Ordinateur", "type": "control" },
+{ "from": "Ordinateur", "to": "Moteur", "type": "control" }
+]
+},
+"pz-003": {
+"title": "Charger un téléphone avec le soleil",
+"links": [
+{ "from": "Soleil (panneau)", "to": "Régulateur (stabilise)", "type": "energy" },
+{ "from": "Régulateur (stabilise)", "to": "Convertisseur DC/DC", "type": "energy" },
+{ "from": "Convertisseur DC/DC", "to": "Chargeur de téléphone", "type": "energy" }
+]
+},
+"pz-004": {
+"title": "Éclairage d’urgence en cas de panne",
+"links": [
+{ "from": "Prise murale", "to": "Disjoncteur/Fusible", "type": "energy" },
+{ "from": "Disjoncteur/Fusible", "to": "Interrupteur", "type": "energy" },
+{ "from": "Batterie 12 V", "to": "Régulateur (stabilise)", "type": "energy" },
+{ "from": "Régulateur (stabilise)", "to": "Interrupteur", "type": "energy" },
+{ "from": "Interrupteur", "to": "Lumière (DEL)", "type": "energy" }
+]
+},
+"pz-005": {
+"title": "Répéter le Wi‑Fi au fond du jardin",
+"links": [
+{ "from": "Soleil (panneau)", "to": "Régulateur (stabilise)", "type": "energy" },
+{ "from": "Régulateur (stabilise)", "to": "Batterie 12 V", "type": "energy" },
+{ "from": "Batterie 12 V", "to": "Point d’accès", "type": "energy" },
+{ "from": "Routeur Wi-Fi", "to": "Point d’accès", "type": "control" }
+]
+},
+"pz-006": {
+"title": "Alerte surchauffe d’ordinateur",
+"links": [
+{ "from": "Prise murale", "to": "Ordinateur", "type": "energy" },
+{ "from": "Prise murale", "to": "Ventilateur", "type": "energy" },
+{ "from": "Capteur température", "to": "Ordinateur", "type": "control" },
+{ "from": "Ordinateur", "to": "Ventilateur", "type": "control" }
+]
+},
+"pz-007": {
+"title": "Télécommande vocale d’une lampe",
+"links": [
+{ "from": "Microphone", "to": "Ordinateur", "type": "control" },
+{ "from": "Ordinateur", "to": "Interrupteur", "type": "control" },
+{ "from": "Interrupteur", "to": "Lumière (DEL)", "type": "control" },
+{ "from": "Prise murale", "to": "Ordinateur", "type": "energy" },
+{ "from": "Prise murale", "to": "Lumière (DEL)", "type": "energy" }
+]
+},
+"pz-008": {
+"title": "Caméra de surveillance sur batterie",
+"links": [
+{ "from": "Batterie 12 V", "to": "Régulateur (stabilise)", "type": "energy" },
+{ "from": "Prise murale", "to": "Régulateur (stabilise)", "type": "energy" },
+{ "from": "Régulateur (stabilise)", "to": "Caméra", "type": "energy" },
+{ "from": "Prise murale", "to": "Routeur Wi-Fi", "type": "energy" },
+{ "from": "Caméra", "to": "Routeur Wi-Fi", "type": "control" }
+]
+},
+"pz-009": {
+"title": "Station météo qui envoie ses données",
+"links": [
+{ "from": "Batterie 12 V", "to": "Régulateur (stabilise)", "type": "energy" },
+{ "from": "Régulateur (stabilise)", "to": "Ordinateur", "type": "energy" },
+{ "from": "Capteur température", "to": "Ordinateur", "type": "control" },
+{ "from": "Capteur pluie", "to": "Ordinateur", "type": "control" },
+{ "from": "Ordinateur", "to": "Point d’accès", "type": "control" }
+]
+},
+"pz-010": {
+"title": "Vélo qui recharge un téléphone",
+"links": [
+{ "from": "Dynamo (vélo)", "to": "Régulateur (stabilise)", "type": "energy" },
+{ "from": "Régulateur (stabilise)", "to": "Convertisseur DC/DC", "type": "energy" },
+{ "from": "Convertisseur DC/DC", "to": "Chargeur de téléphone", "type": "energy" }
+]
+},
+"pz-011": {
+"title": "Alerte inondation dans la serre",
+"links": [
+{ "from": "Prise murale", "to": "Ordinateur", "type": "energy" },
+{ "from": "Capteur pluie", "to": "Ordinateur", "type": "control" },
+{ "from": "Ordinateur", "to": "Point d’accès", "type": "control" },
+{ "from": "Point d’accès", "to": "Téléphone", "type": "control" }
+]
+},
+"pz-012": {
+"title": "Alimenter un répéteur d’urgence en montagne",
+"links": [
+{ "from": "Soleil (panneau)", "to": "Régulateur (stabilise)", "type": "energy" },
+{ "from": "Vent (éolienne)", "to": "Régulateur (stabilise)", "type": "energy" },
+{ "from": "Régulateur (stabilise)", "to": "Batterie 12 V", "type": "energy" },
+{ "from": "Batterie 12 V", "to": "Répéteur d’urgence", "type": "energy" }
+]
+},
+"pz-013": {
+"title": "Refroidir une armoire électrique",
+"links": [
+{ "from": "Prise murale", "to": "Ventilateur", "type": "energy" },
+{ "from": "Capteur température", "to": "Interrupteur", "type": "control" },
+{ "from": "Interrupteur", "to": "Ventilateur", "type": "control" }
+]
+},
+"pz-014": {
+"title": "Ouvrir la porte de poulailler à l’aube",
+"links": [
+{ "from": "Batterie 12 V", "to": "Ordinateur", "type": "energy" },
+{ "from": "Ordinateur", "to": "Interrupteur", "type": "control" },
+{ "from": "Batterie 12 V", "to": "Interrupteur", "type": "energy" },
+{ "from": "Interrupteur", "to": "Moteur", "type": "energy" }
+]
+},
+"pz-015": {
+"title": "Secours en cas de polarité inversée",
+"links": [
+{ "from": "Batterie 12 V", "to": "Disjoncteur/Fusible", "type": "energy" },
+{ "from": "Disjoncteur/Fusible", "to": "Régulateur (stabilise)", "type": "energy" },
+{ "from": "Régulateur (stabilise)", "to": "Ordinateur", "type": "energy" }
+]
+},
+"pz-016": {
+"title": "Connecter une caméra éloignée par Ethernet",
+"links": [
+{ "from": "Prise murale", "to": "Routeur Wi-Fi", "type": "energy" },
+{ "from": "Prise murale", "to": "Caméra", "type": "energy" },
+{ "from": "Caméra", "to": "Câble Ethernet", "type": "control" },
+{ "from": "Câble Ethernet", "to": "Routeur Wi-Fi", "type": "control" }
+]
+},
+"pz-017": {
+"title": "Alimenter un ordinateur depuis une batterie",
+"links": [
+{ "from": "Batterie 12 V", "to": "Disjoncteur/Fusible", "type": "energy" },
+{ "from": "Disjoncteur/Fusible", "to": "Onduleur (DC→AC)", "type": "energy" },
+{ "from": "Onduleur (DC→AC)", "to": "Ordinateur", "type": "energy" }
+]
+},
+"pz-018": {
+"title": "Ventiler la chambre silencieusement",
+"links": [
+{ "from": "Prise murale", "to": "Disjoncteur/Fusible", "type": "energy" },
+{ "from": "Disjoncteur/Fusible", "to": "Ventilateur", "type": "energy" },
+{ "from": "Bouton poussoir", "to": "Ventilateur", "type": "control" }
+]
+},
+"pz-019": {
+"title": "Sonde de pluie autonome",
+"links": [
+{ "from": "Batterie 12 V", "to": "Régulateur (stabilise)", "type": "energy" },
+{ "from": "Régulateur (stabilise)", "to": "Capteur pluie", "type": "energy" },
+{ "from": "Capteur pluie", "to": "Point d’accès", "type": "control" },
+{ "from": "Point d’accès", "to": "Téléphone", "type": "control" }
+]
+},
+"pz-020": {
+"title": "Alimenter une multiprise à partir du vélo",
+"links": [
+{ "from": "Dynamo (vélo)", "to": "Régulateur (stabilise)", "type": "energy" },
+{ "from": "Régulateur (stabilise)", "to": "Batterie 12 V", "type": "energy" },
+{ "from": "Batterie 12 V", "to": "Onduleur (DC→AC)", "type": "energy" },
+{ "from": "Onduleur (DC→AC)", "to": "Multiprise", "type": "energy" }
+]
+},
+"pz-021": {
+"title": "Éolienne de toit pour capteurs",
+"links": [
+{ "from": "Vent (éolienne)", "to": "Régulateur (stabilise)", "type": "energy" },
+{ "from": "Régulateur (stabilise)", "to": "Batterie 12 V", "type": "energy" },
+{ "from": "Batterie 12 V", "to": "Capteur température", "type": "energy" }
+]
+},
+"pz-022": {
+"title": "Téléphone comme passerelle réseau",
+"links": [
+{ "from": "Prise murale", "to": "Ordinateur", "type": "energy" },
+{ "from": "Capteur température", "to": "Ordinateur", "type": "control" },
+{ "from": "Ordinateur", "to": "Point d’accès", "type": "control" },
+{ "from": "Point d’accès", "to": "Téléphone", "type": "control" }
+]
+},
+"pz-023": {
+"title": "Lampe d’atelier robuste",
+"links": [
+{ "from": "Batterie 12 V", "to": "Disjoncteur/Fusible", "type": "energy" },
+{ "from": "Disjoncteur/Fusible", "to": "Régulateur (stabilise)", "type": "energy" },
+{ "from": "Régulateur (stabilise)", "to": "Lumière (DEL)", "type": "energy" }
+]
+},
+"pz-024": {
+"title": "Pont Wi‑Fi entre deux bâtiments",
+"links": [
+{ "from": "Prise murale", "to": "Routeur Wi-Fi", "type": "energy" },
+{ "from": "Prise murale", "to": "Point d’accès", "type": "energy" },
+{ "from": "Routeur Wi-Fi", "to": "Point d’accès", "type": "control" },
+{ "from": "Point d’accès", "to": "Antenne tour", "type": "control" }
+]
+},
+"pz-025": {
+"title": "Caméra sur poteau solaire",
+"links": [
+{ "from": "Soleil (panneau)", "to": "Régulateur (stabilise)", "type": "energy" },
+{ "from": "Régulateur (stabilise)", "to": "Batterie 12 V", "type": "energy" },
+{ "from": "Batterie 12 V", "to": "Caméra", "type": "energy" },
+{ "from": "Caméra", "to": "Point d’accès", "type": "control" }
+]
+},
+"pz-026": {
+"title": "Refroidir un boîtier multimédia",
+"links": [
+{ "from": "Prise murale", "to": "Ventilateur", "type": "energy" },
+{ "from": "Capteur température", "to": "Interrupteur", "type": "control" },
+{ "from": "Interrupteur", "to": "Ventilateur", "type": "control" }
+]
+},
+"pz-027": {
+"title": "Bascule automatique secteur → batterie",
+"links": [
+{ "from": "Prise murale", "to": "Interrupteur", "type": "energy" },
+{ "from": "Batterie 12 V", "to": "Régulateur (stabilise)", "type": "energy" },
+{ "from": "Régulateur (stabilise)", "to": "Interrupteur", "type": "energy" },
+{ "from": "Interrupteur", "to": "Routeur Wi-Fi", "type": "energy" }
+]
+},
+"pz-028": {
+"title": "Allumer la serre au crépuscule (simplifié)",
+"links": [
+{ "from": "Batterie 12 V", "to": "Régulateur (stabilise)", "type": "energy" },
+{ "from": "Régulateur (stabilise)", "to": "Lumière (DEL)", "type": "energy" },
+{ "from": "Ordinateur", "to": "Lumière (DEL)", "type": "control" }
+]
+},
+"pz-029": {
+"title": "Alerte température au téléphone",
+"links": [
+{ "from": "Prise murale", "to": "Ordinateur", "type": "energy" },
+{ "from": "Capteur température", "to": "Ordinateur", "type": "control" },
+{ "from": "Ordinateur", "to": "Point d’accès", "type": "control" },
+{ "from": "Point d’accès", "to": "Téléphone", "type": "control" }
+]
+},
+"pz-030": {
+"title": "Charger plusieurs appareils au camping",
+"links": [
+{ "from": "Soleil (panneau)", "to": "Régulateur (stabilise)", "type": "energy" },
+{ "from": "Régulateur (stabilise)", "to": "Batterie 12 V", "type": "energy" },
+{ "from": "Batterie 12 V", "to": "Multiprise", "type": "energy" },
+{ "from": "Batterie 12 V", "to": "Convertisseur DC/DC", "type": "energy" }
+]
+},
+"pz-031": {
+"title": "Ventiler un tuteur de serveurs",
+"links": [
+{ "from": "Prise murale", "to": "Ordinateur", "type": "energy" },
+{ "from": "Prise murale", "to": "Ventilateur", "type": "energy" },
+{ "from": "Capteur température", "to": "Ordinateur", "type": "control" },
+{ "from": "Ordinateur", "to": "Ventilateur", "type": "control" },
+{ "from": "Ordinateur", "to": "Routeur Wi-Fi", "type": "control" }
+]
+},
+"pz-032": {
+"title": "Relier capteur → ordinateur par câble",
+"links": [
+{ "from": "Prise murale", "to": "Ordinateur", "type": "energy" },
+{ "from": "Capteur température", "to": "Câble Ethernet", "type": "control" },
+{ "from": "Câble Ethernet", "to": "Ordinateur", "type": "control" }
+]
+},
+"pz-033": {
+"title": "Réduire pertes sur très long câble",
+"links": [
+{ "from": "Prise murale", "to": "Routeur Wi-Fi", "type": "energy" },
+{ "from": "Prise murale", "to": "Point d’accès", "type": "energy" },
+{ "from": "Ordinateur", "to": "Routeur Wi-Fi", "type": "control" },
+{ "from": "Routeur Wi-Fi", "to": "Point d’accès", "type": "control" },
+{ "from": "Point d’accès", "to": "Antenne tour", "type": "control" }
+]
+},
+"pz-034": {
+"title": "Salon multimédia sans surcharge",
+"links": [
+{ "from": "Prise murale", "to": "Disjoncteur/Fusible", "type": "energy" },
+{ "from": "Disjoncteur/Fusible", "to": "Multiprise", "type": "energy" },
+{ "from": "Multiprise", "to": "Routeur Wi-Fi", "type": "energy" }
+]
+},
+"pz-035": {
+"title": "Arroser la serre quand il ne pleut pas (simplifié)",
+"links": [
+{ "from": "Batterie 12 V", "to": "Régulateur (stabilise)", "type": "energy" },
+{ "from": "Régulateur (stabilise)", "to": "Moteur", "type": "energy" },
+{ "from": "Capteur température", "to": "Ordinateur", "type": "control" },
+{ "from": "Capteur pluie", "to": "Ordinateur", "type": "control" },
+{ "from": "Ordinateur", "to": "Moteur", "type": "control" }
+]
+},
+"pz-036": {
+"title": "Boombox autonome",
+"links": [
+{ "from": "Batterie 12 V", "to": "Régulateur (stabilise)", "type": "energy" },
+{ "from": "Régulateur (stabilise)", "to": "Haut-parleur", "type": "energy" },
+{ "from": "Téléphone", "to": "Haut-parleur", "type": "control" }
+]
+},
+"pz-037": {
+"title": "Annonce vocale météo",
+"links": [
+{ "from": "Prise murale", "to": "Ordinateur", "type": "energy" },
+{ "from": "Capteur température", "to": "Ordinateur", "type": "control" },
+{ "from": "Capteur pluie", "to": "Ordinateur", "type": "control" },
+{ "from": "Ordinateur", "to": "Haut-parleur", "type": "control" }
+]
+},
+"pz-038": {
+"title": "Caméra sonnette",
+"links": [
+{ "from": "Prise murale", "to": "Caméra", "type": "energy" },
+{ "from": "Caméra", "to": "Point d’accès", "type": "control" },
+{ "from": "Point d’accès", "to": "Téléphone", "type": "control" },
+{ "from": "Bouton poussoir", "to": "Caméra", "type": "control" }
+]
+},
+"pz-039": {
+"title": "Fermeture automatique du poulailler quand il pleut",
+"links": [
+{ "from": "Batterie 12 V", "to": "Interrupteur", "type": "energy" },
+{ "from": "Interrupteur", "to": "Moteur", "type": "energy" },
+{ "from": "Capteur pluie", "to": "Ordinateur", "type": "control" },
+{ "from": "Ordinateur", "to": "Interrupteur", "type": "control" }
+]
+},
+"pz-040": {
+"title": "Mini‑data‑center sur onduleur",
+"links": [
+{ "from": "Batterie 12 V", "to": "Onduleur (DC→AC)", "type": "energy" },
+{ "from": "Onduleur (DC→AC)", "to": "Routeur Wi-Fi", "type": "energy" },
+{ "from": "Onduleur (DC→AC)", "to": "Ordinateur", "type": "energy" }
+]
+},
+"pz-041": {
+"title": "Ruche connectée (température)",
+"links": [
+{ "from": "Batterie 12 V", "to": "Régulateur (stabilise)", "type": "energy" },
+{ "from": "Régulateur (stabilise)", "to": "Ordinateur", "type": "energy" },
+{ "from": "Capteur température", "to": "Ordinateur", "type": "control" },
+{ "from": "Ordinateur", "to": "Point d’accès", "type": "control" }
+]
+},
+"pz-042": {
+"title": "Parole → lumière",
+"links": [
+{ "from": "Prise murale", "to": "Ordinateur", "type": "energy" },
+{ "from": "Prise murale", "to": "Lumière (DEL)", "type": "energy" },
+{ "from": "Microphone", "to": "Ordinateur", "type": "control" },
+{ "from": "Ordinateur", "to": "Interrupteur", "type": "control" },
+{ "from": "Interrupteur", "to": "Lumière (DEL)", "type": "control" }
+]
+},
+"pz-043": {
+"title": "Caméra embarquée vélo",
+"links": [
+{ "from": "Dynamo (vélo)", "to": "Régulateur (stabilise)", "type": "energy" },
+{ "from": "Régulateur (stabilise)", "to": "Batterie 12 V", "type": "energy" },
+{ "from": "Batterie 12 V", "to": "Caméra", "type": "energy" }
+]
+},
+"pz-044": {
+"title": "Capter la météo et l’envoyer au web",
+"links": [
+{ "from": "Soleil (panneau)", "to": "Régulateur (stabilise)", "type": "energy" },
+{ "from": "Régulateur (stabilise)", "to": "Capteur température", "type": "energy" },
+{ "from": "Régulateur (stabilise)", "to": "Capteur pluie", "type": "energy" },
+{ "from": "Capteur température", "to": "Point d’accès", "type": "control" },
+{ "from": "Capteur pluie", "to": "Point d’accès", "type": "control" }
+]
+},
+"pz-045": {
+"title": "Écoute à distance (micro)",
+"links": [
+{ "from": "Prise murale", "to": "Ordinateur", "type": "energy" },
+{ "from": "Microphone", "to": "Ordinateur", "type": "control" },
+{ "from": "Ordinateur", "to": "Point d’accès", "type": "control" },
+{ "from": "Point d’accès", "to": "Routeur Wi-Fi", "type": "control" }
+]
+},
+"pz-046": {
+"title": "Climatisation simple d’atelier",
+"links": [
+{ "from": "Prise murale", "to": "Ventilateur", "type": "energy" },
+{ "from": "Capteur température", "to": "Interrupteur", "type": "control" },
+{ "from": "Interrupteur", "to": "Ventilateur", "type": "control" }
+]
+},
+"pz-047": {
+"title": "Réseau pour serre isolée",
+"links": [
+{ "from": "Prise murale", "to": "Routeur Wi-Fi", "type": "energy" },
+{ "from": "Prise murale", "to": "Point d’accès", "type": "energy" },
+{ "from": "Routeur Wi-Fi", "to": "Point d’accès", "type": "control" },
+{ "from": "Point d’accès", "to": "Antenne tour", "type": "control" }
+]
+},
+"pz-048": {
+"title": "Charge nocturne sur prise murale",
+"links": [
+{ "from": "Prise murale", "to": "Multiprise", "type": "energy" },
+{ "from": "Multiprise", "to": "Chargeur de téléphone", "type": "energy" },
+{ "from": "Multiprise", "to": "Lumière (DEL)", "type": "energy" }
+]
+},
+"pz-049": {
+"title": "Sécuriser une alimentation sensible",
+"links": [
+{ "from": "Prise murale", "to": "Disjoncteur/Fusible", "type": "energy" },
+{ "from": "Disjoncteur/Fusible", "to": "Régulateur (stabilise)", "type": "energy" },
+{ "from": "Régulateur (stabilise)", "to": "Ordinateur", "type": "energy" }
+]
+},
+"pz-050": {
+"title": "Borne de recharge vélo+phone",
+"links": [
+{ "from": "Dynamo (vélo)", "to": "Régulateur (stabilise)", "type": "energy" },
+{ "from": "Régulateur (stabilise)", "to": "Convertisseur DC/DC", "type": "energy" },
+{ "from": "Convertisseur DC/DC", "to": "Chargeur de téléphone", "type": "energy" },
+{ "from": "Régulateur (stabilise)", "to": "Lumière (DEL)", "type": "energy" }
+]
+},
+"pz-051": {
+"title": "Surveillance pluie pour volets",
+"links": [
+{ "from": "Prise murale", "to": "Moteur", "type": "energy" },
+{ "from": "Capteur pluie", "to": "Ordinateur", "type": "control" },
+{ "from": "Ordinateur", "to": "Interrupteur", "type": "control" },
+{ "from": "Interrupteur", "to": "Moteur", "type": "control" }
+]
+},
+"pz-052": {
+"title": "Thermomètre parlant pour classe",
+"links": [
+{ "from": "Prise murale", "to": "Ordinateur", "type": "energy" },
+{ "from": "Capteur température", "to": "Ordinateur", "type": "control" },
+{ "from": "Ordinateur", "to": "Haut-parleur", "type": "control" }
+]
+},
+"pz-053": {
+"title": "Caméra avec sauvegarde locale",
+"links": [
+{ "from": "Prise murale", "to": "Caméra", "type": "energy" },
+{ "from": "Prise murale", "to": "Ordinateur", "type": "energy" },
+{ "from": "Caméra", "to": "Routeur Wi-Fi", "type": "control" },
+{ "from": "Routeur Wi-Fi", "to": "Ordinateur", "type": "control" }
+]
+},
+"pz-054": {
+"title": "Capteur météo en montagne",
+"links": [
+{ "from": "Soleil (panneau)", "to": "Régulateur (stabilise)", "type": "energy" },
+{ "from": "Régulateur (stabilise)", "to": "Batterie 12 V", "type": "energy" },
+{ "from": "Batterie 12 V", "to": "Capteur température", "type": "energy" },
+{ "from": "Batterie 12 V", "to": "Capteur pluie", "type": "energy" },
+{ "from": "Capteur température", "to": "Point d’accès", "type": "control" },
+{ "from": "Capteur pluie", "to": "Point d’accès", "type": "control" },
+{ "from": "Point d’accès", "to": "Antenne tour", "type": "control" }
+]
+},
+"pz-055": {
+"title": "Voix → routeur → téléphone",
+"links": [
+{ "from": "Prise murale", "to": "Ordinateur", "type": "energy" },
+{ "from": "Microphone", "to": "Ordinateur", "type": "control" },
+{ "from": "Ordinateur", "to": "Routeur Wi-Fi", "type": "control" },
+{ "from": "Routeur Wi-Fi", "to": "Téléphone", "type": "control" }
+]
+},
+"pz-056": {
+"title": "Hub énergie off‑grid pour classe verte",
+"links": [
+{ "from": "Soleil (panneau)", "to": "Régulateur (stabilise)", "type": "energy" },
+{ "from": "Régulateur (stabilise)", "to": "Batterie 12 V", "type": "energy" },
+{ "from": "Batterie 12 V", "to": "Multiprise", "type": "energy" },
+{ "from": "Batterie 12 V", "to": "Convertisseur DC/DC", "type": "energy" }
+]
+},
+"pz-057": {
+"title": "Routeur de secours",
+"links": [
+{ "from": "Batterie 12 V", "to": "Disjoncteur/Fusible", "type": "energy" },
+{ "from": "Disjoncteur/Fusible", "to": "Régulateur (stabilise)", "type": "energy" },
+{ "from": "Régulateur (stabilise)", "to": "Routeur Wi-Fi", "type": "energy" }
+]
+},
+"pz-058": {
+"title": "Panneau + éolienne hybrides",
+"links": [
+{ "from": "Soleil (panneau)", "to": "Régulateur (stabilise)", "type": "energy" },
+{ "from": "Vent (éolienne)", "to": "Régulateur (stabilise)", "type": "energy" },
+{ "from": "Régulateur (stabilise)", "to": "Batterie 12 V", "type": "energy" },
+{ "from": "Batterie 12 V", "to": "Multiprise", "type": "energy" }
+]
+},
+"pz-059": {
+"title": "PC météo local + upload",
+"links": [
+{ "from": "Prise murale", "to": "Ordinateur", "type": "energy" },
+{ "from": "Capteur température", "to": "Ordinateur", "type": "control" },
+{ "from": "Ordinateur", "to": "Routeur Wi-Fi", "type": "control" },
+{ "from": "Routeur Wi-Fi", "to": "Point d’accès", "type": "control" }
+]
+},
+"pz-060": {
+"title": "Éclairage vélo + charge phone",
+"links": [
+{ "from": "Dynamo (vélo)", "to": "Convertisseur DC/DC", "type": "energy" },
+{ "from": "Convertisseur DC/DC", "to": "Chargeur de téléphone", "type": "energy" },
+{ "from": "Dynamo (vélo)", "to": "Lumière (DEL)", "type": "energy" }
+]
+},
+"pz-061": {
+"title": "Alerte gel pour serre",
+"links": [
+{ "from": "Prise murale", "to": "Ordinateur", "type": "energy" },
+{ "from": "Capteur température", "to": "Ordinateur", "type": "control" },
+{ "from": "Ordinateur", "to": "Point d’accès", "type": "control" },
+{ "from": "Point d’accès", "to": "Téléphone", "type": "control" }
+]
+},
+"pz-062": {
+"title": "Caméra porte garage",
+"links": [
+{ "from": "Prise murale", "to": "Caméra", "type": "energy" },
+{ "from": "Prise murale", "to": "Routeur Wi-Fi", "type": "energy" },
+{ "from": "Caméra", "to": "Routeur Wi-Fi", "type": "control" }
+]
+},
+"pz-063": {
+"title": "Audio interclasse",
+"links": [
+{ "from": "Prise murale", "to": "Ordinateur", "type": "energy" },
+{ "from": "Microphone", "to": "Ordinateur", "type": "control" },
+{ "from": "Ordinateur", "to": "Haut-parleur", "type": "control" }
+]
+},
+"pz-064": {
+"title": "Capteur météo en montagne",
+"links": [
+{ "from": "Batterie 12 V", "to": "Régulateur (stabilise)", "type": "energy" },
+{ "from": "Régulateur (stabilise)", "to": "Ordinateur", "type": "energy" },
+{ "from": "Capteur pluie", "to": "Ordinateur", "type": "control" },
+{ "from": "Ordinateur", "to": "Point d’accès", "type": "control" }
+]
+},
+"pz-065": {
+"title": "Hub audio batterie",
+"links": [
+{ "from": "Batterie 12 V", "to": "Régulateur (stabilise)", "type": "energy" },
+{ "from": "Régulateur (stabilise)", "to": "Haut-parleur", "type": "energy" },
+{ "from": "Téléphone", "to": "Haut-parleur", "type": "control" }
+]
+},
+"pz-066": {
+"title": "Refroidir mini‑PC fanless",
+"links": [
+{ "from": "Prise murale", "to": "Ordinateur", "type": "energy" },
+{ "from": "Prise murale", "to": "Ventilateur", "type": "energy" },
+{ "from": "Capteur température", "to": "Ordinateur", "type": "control" },
+{ "from": "Ordinateur", "to": "Ventilateur", "type": "control" }
+]
+},
+"pz-067": {
+"title": "Relais urgence village",
+"links": [
+{ "from": "Soleil (panneau)", "to": "Régulateur (stabilise)", "type": "energy" },
+{ "from": "Vent (éolienne)", "to": "Régulateur (stabilise)", "type": "energy" },
+{ "from": "Régulateur (stabilise)", "to": "Batterie 12 V", "type": "energy" },
+{ "from": "Batterie 12 V", "to": "Répéteur d’urgence", "type": "energy" }
+]
+},
+"pz-068": {
+"title": "Pont Wi‑Fi longue distance",
+"links": [
+{ "from": "Prise murale", "to": "Routeur Wi-Fi", "type": "energy" },
+{ "from": "Prise murale", "to": "Point d’accès", "type": "energy" },
+{ "from": "Routeur Wi-Fi", "to": "Point d’accès", "type": "control" },
+{ "from": "Point d’accès", "to": "Antenne tour", "type": "control" }
+]
+},
+"pz-069": {
+"title": "Charge nocturne sécurisée",
+"links": [
+{ "from": "Prise murale", "to": "Disjoncteur/Fusible", "type": "energy" },
+{ "from": "Disjoncteur/Fusible", "to": "Multiprise", "type": "energy" },
+{ "from": "Multiprise", "to": "Chargeur de téléphone", "type": "energy" }
+]
+},
+"pz-070": {
+"title": "Caméra classe plein air",
+"links": [
+{ "from": "Soleil (panneau)", "to": "Régulateur (stabilise)", "type": "energy" },
+{ "from": "Régulateur (stabilise)", "to": "Batterie 12 V", "type": "energy" },
+{ "from": "Batterie 12 V", "to": "Caméra", "type": "energy" },
+{ "from": "Caméra", "to": "Point d’accès", "type": "control" }
+]
+},
+"pz-071": {
+"title": "Mesure de température de frigo",
+"links": [
+{ "from": "Prise murale", "to": "Ordinateur", "type": "energy" },
+{ "from": "Capteur température", "to": "Ordinateur", "type": "control" },
+{ "from": "Ordinateur", "to": "Point d’accès", "type": "control" },
+{ "from": "Point d’accès", "to": "Téléphone", "type": "control" }
+]
+},
+"pz-072": {
+"title": "Vélo électrique: recharge d’appoint",
+"links": [
+{ "from": "Soleil (panneau)", "to": "Régulateur (stabilise)", "type": "energy" },
+{ "from": "Régulateur (stabilise)", "to": "Batterie 12 V", "type": "energy" },
+{ "from": "Batterie 12 V", "to": "Onduleur (DC→AC)", "type": "energy" },
+{ "from": "Onduleur (DC→AC)", "to": "Vélo électrique", "type": "energy" }
+]
+},
+"pz-073": {
+"title": "Atelier: table connectée",
+"links": [
+{ "from": "Prise murale", "to": "Lumière (DEL)", "type": "energy" },
+{ "from": "Prise murale", "to": "Ordinateur", "type": "energy" },
+{ "from": "Ordinateur", "to": "Routeur Wi-Fi", "type": "control" }
+]
+},
+"pz-074": {
+"title": "Antenne + satellite passerelle",
+"links": [
+{ "from": "Prise murale", "to": "Routeur Wi-Fi", "type": "energy" },
+{ "from": "Routeur Wi-Fi", "to": "Point d’accès", "type": "control" },
+{ "from": "Point d’accès", "to": "Antenne tour", "type": "control" },
+{ "from": "Antenne tour", "to": "Satellite", "type": "control" }
+]
+},
+"pz-075": {
+"title": "Audio guide serre",
+"links": [
+{ "from": "Prise murale", "to": "Régulateur (stabilise)", "type": "energy" },
+{ "from": "Régulateur (stabilise)", "to": "Haut-parleur", "type": "energy" },
+{ "from": "Téléphone", "to": "Haut-parleur", "type": "control" }
+]
+},
+"pz-076": {
+"title": "Affichage état météo local",
+"links": [
+{ "from": "Prise murale", "to": "Ordinateur", "type": "energy" },
+{ "from": "Capteur pluie", "to": "Ordinateur", "type": "control" },
+{ "from": "Capteur température", "to": "Ordinateur", "type": "control" },
+{ "from": "Ordinateur", "to": "Lumière (DEL)", "type": "control" }
+]
+},
+"pz-077": {
+"title": "Protection polarité atelier",
+"links": [
+{ "from": "Prise murale", "to": "Disjoncteur/Fusible", "type": "energy" },
+{ "from": "Disjoncteur/Fusible", "to": "Régulateur (stabilise)", "type": "energy" },
+{ "from": "Régulateur (stabilise)", "to": "Multiprise", "type": "energy" }
+]
+},
+"pz-078": {
+"title": "Répéteur de secours solaire",
+"links": [
+{ "from": "Soleil (panneau)", "to": "Régulateur (stabilise)", "type": "energy" },
+{ "from": "Régulateur (stabilise)", "to": "Batterie 12 V", "type": "energy" },
+{ "from": "Batterie 12 V", "to": "Point d’accès", "type": "energy" },
+{ "from": "Point d’accès", "to": "Routeur Wi-Fi", "type": "control" }
+]
+},
+"pz-079": {
+"title": "Caméra avec audio bidirectionnel",
+"links": [
+{ "from": "Prise murale", "to": "Caméra", "type": "energy" },
+{ "from": "Caméra", "to": "Routeur Wi-Fi", "type": "control" },
+{ "from": "Microphone", "to": "Caméra", "type": "control" },
+{ "from": "Caméra", "to": "Haut-parleur", "type": "control" }
+]
+},
+"pz-080": {
+"title": "Serveur météo local + LED",
+"links": [
+{ "from": "Prise murale", "to": "Ordinateur", "type": "energy" },
+{ "from": "Capteur température", "to": "Ordinateur", "type": "control" },
+{ "from": "Ordinateur", "to": "Lumière (DEL)", "type": "control" }
+]
+},
+"pz-081": {
+"title": "Sonnette parlante",
+"links": [
+{ "from": "Prise murale", "to": "Ordinateur", "type": "energy" },
+{ "from": "Bouton poussoir", "to": "Ordinateur", "type": "control" },
+{ "from": "Ordinateur", "to": "Haut-parleur", "type": "control" }
+]
+},
+"pz-082": {
+"title": "Indicateur pluie lumineux",
+"links": [
+{ "from": "Batterie 12 V", "to": "Interrupteur", "type": "energy" },
+{ "from": "Interrupteur", "to": "Lumière (DEL)", "type": "energy" },
+{ "from": "Capteur pluie", "to": "Interrupteur", "type": "control" }
+]
+},
+"pz-083": {
+"title": "Réfrigérateur labo sécurisé",
+"links": [
+{ "from": "Prise murale", "to": "Disjoncteur/Fusible", "type": "energy" },
+{ "from": "Disjoncteur/Fusible", "to": "Onduleur (DC→AC)", "type": "energy" },
+{ "from": "Onduleur (DC→AC)", "to": "Ordinateur", "type": "energy" }
+]
+},
+"pz-084": {
+"title": "Antenne + répéteur village",
+"links": [
+{ "from": "Soleil (panneau)", "to": "Batterie 12 V", "type": "energy" },
+{ "from": "Batterie 12 V", "to": "Répéteur d’urgence", "type": "energy" },
+{ "from": "Répéteur d’urgence", "to": "Point d’accès", "type": "control" },
+{ "from": "Point d’accès", "to": "Antenne tour", "type": "control" },
+{ "from": "Routeur Wi-Fi", "to": "Point d’accès", "type": "control" }
+]
+},
+"pz-085": {
+"title": "Voiturette solaire école",
+"links": [
+{ "from": "Soleil (panneau)", "to": "Régulateur (stabilise)", "type": "energy" },
+{ "from": "Régulateur (stabilise)", "to": "Lumière (DEL)", "type": "energy" },
+{ "from": "Régulateur (stabilise)", "to": "Chargeur de téléphone", "type": "energy" }
+]
+},
+"pz-086": {
+"title": "Thermomètre vocal accessibilité",
+"links": [
+{ "from": "Prise murale", "to": "Ordinateur", "type": "energy" },
+{ "from": "Capteur température", "to": "Ordinateur", "type": "control" },
+{ "from": "Ordinateur", "to": "Haut-parleur", "type": "control" },
+{ "from": "Ordinateur", "to": "Téléphone", "type": "control" }
+]
+},
+"pz-087": {
+"title": "Guirlande LED sur batterie",
+"links": [
+{ "from": "Batterie 12 V", "to": "Régulateur (stabilise)", "type": "energy" },
+{ "from": "Régulateur (stabilise)", "to": "Interrupteur", "type": "energy" },
+{ "from": "Interrupteur", "to": "Lumière (DEL)", "type": "energy" }
+]
+},
+"pz-088": {
+"title": "Borne Wi‑Fi solaire temporaire",
+"links": [
+{ "from": "Soleil (panneau)", "to": "Régulateur (stabilise)", "type": "energy" },
+{ "from": "Régulateur (stabilise)", "to": "Batterie 12 V", "type": "energy" },
+{ "from": "Batterie 12 V", "to": "Point d’accès", "type": "energy" },
+{ "from": "Point d’accès", "to": "Routeur Wi-Fi", "type": "control" }
+]
+},
+"pz-089": {
+"title": "Podium: annonce + musique",
+"links": [
+{ "from": "Prise murale", "to": "Ordinateur", "type": "energy" },
+{ "from": "Microphone", "to": "Ordinateur", "type": "control" },
+{ "from": "Téléphone", "to": "Ordinateur", "type": "control" },
+{ "from": "Ordinateur", "to": "Haut-parleur", "type": "control" }
+]
+},
+"pz-090": {
+"title": "Prédire coupure (surveillance tension)",
+"links": [
+{ "from": "Prise murale", "to": "Disjoncteur/Fusible", "type": "energy" },
+{ "from": "Disjoncteur/Fusible", "to": "Multiprise", "type": "energy" },
+{ "from": "Multiprise", "to": "Ordinateur", "type": "energy" },
+{ "from": "Ordinateur", "to": "Régulateur (stabilise)", "type": "control" }
+]
+},
+"pz-091": {
+"title": "SOS montagne: relais + sat",
+"links": [
+{ "from": "Soleil (panneau)", "to": "Régulateur (stabilise)", "type": "energy" },
+{ "from": "Régulateur (stabilise)", "to": "Batterie 12 V", "type": "energy" },
+{ "from": "Batterie 12 V", "to": "Répéteur d’urgence", "type": "energy" },
+{ "from": "Répéteur d’urgence", "to": "Point d’accès", "type": "control" },
+{ "from": "Point d’accès", "to": "Satellite", "type": "control" }
+]
+},
+"pz-092": {
+"title": "Fête de quartier: énergie partagée",
+"links": [
+{ "from": "Soleil (panneau)", "to": "Régulateur (stabilise)", "type": "energy" },
+{ "from": "Régulateur (stabilise)", "to": "Batterie 12 V", "type": "energy" },
+{ "from": "Batterie 12 V", "to": "Multiprise", "type": "energy" }
+]
+},
+"pz-093": {
+"title": "Caméra serre + alerte pluie",
+"links": [
+{ "from": "Prise murale", "to": "Caméra", "type": "energy" },
+{ "from": "Caméra", "to": "Point d’accès", "type": "control" },
+{ "from": "Capteur pluie", "to": "Point d’accès", "type": "control" },
+{ "from": "Point d’accès", "to": "Téléphone", "type": "control" }
+]
+},
+"pz-094": {
+"title": "Voix → LED pédagogique",
+"links": [
+{ "from": "Prise murale", "to": "Ordinateur", "type": "energy" },
+{ "from": "Prise murale", "to": "Lumière (DEL)", "type": "energy" },
+{ "from": "Microphone", "to": "Ordinateur", "type": "control" },
+{ "from": "Ordinateur", "to": "Interrupteur", "type": "control" },
+{ "from": "Interrupteur", "to": "Lumière (DEL)", "type": "control" }
+]
+},
+"pz-095": {
+"title": "Abri bus connecté",
+"links": [
+{ "from": "Soleil (panneau)", "to": "Régulateur (stabilise)", "type": "energy" },
+{ "from": "Régulateur (stabilise)", "to": "Batterie 12 V", "type": "energy" },
+{ "from": "Batterie 12 V", "to": "Lumière (DEL)", "type": "energy" },
+{ "from": "Batterie 12 V", "to": "Point d’accès", "type": "energy" }
+]
+},
+"pz-096": {
+"title": "Ruche: ventilateur anti‑chaleur",
+"links": [
+{ "from": "Batterie 12 V", "to": "Ventilateur", "type": "energy" },
+{ "from": "Capteur température", "to": "Ordinateur", "type": "control" },
+{ "from": "Ordinateur", "to": "Interrupteur", "type": "control" },
+{ "from": "Interrupteur", "to": "Ventilateur", "type": "control" }
+]
+},
+"pz-097": {
+"title": "Point d’accès marina sur batterie",
+"links": [
+{ "from": "Soleil (panneau)", "to": "Régulateur (stabilise)", "type": "energy" },
+{ "from": "Régulateur (stabilise)", "to": "Batterie 12 V", "type": "energy" },
+{ "from": "Batterie 12 V", "to": "Point d’accès", "type": "energy" },
+{ "from": "Point d’accès", "to": "Routeur Wi-Fi", "type": "control" }
+]
+},
+"pz-098": {
+"title": "Caméra mobile voiturette",
+"links": [
+{ "from": "Batterie 12 V", "to": "Régulateur (stabilise)", "type": "energy" },
+{ "from": "Régulateur (stabilise)", "to": "Moteur", "type": "energy" },
+{ "from": "Régulateur (stabilise)", "to": "Caméra", "type": "energy" },
+{ "from": "Caméra", "to": "Point d’accès", "type": "control" }
+]
+},
+"pz-099": {
+"title": "Panne secteur: bascule lumière",
+"links": [
+{ "from": "Prise murale", "to": "Interrupteur", "type": "energy" },
+{ "from": "Batterie 12 V", "to": "Régulateur (stabilise)", "type": "energy" },
+{ "from": "Régulateur (stabilise)", "to": "Interrupteur", "type": "energy" },
+{ "from": "Interrupteur", "to": "Lumière (DEL)", "type": "energy" }
+]
+},
+"pz-100": {
+"title": "Serre connectée complète",
+"links": [
+{ "from": "Soleil (panneau)", "to": "Régulateur (stabilise)", "type": "energy" },
+{ "from": "Régulateur (stabilise)", "to": "Batterie 12 V", "type": "energy" },
+{ "from": "Batterie 12 V", "to": "Ventilateur", "type": "energy" },
+{ "from": "Capteur température", "to": "Ventilateur", "type": "control" },
+{ "from": "Capteur pluie", "to": "Point d’accès", "type": "control" }
+]
 }
-
+}
